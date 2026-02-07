@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MM Data Flow: Redis, Kafka, Database</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #fff;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 26px;
+            color: #00d9ff;
+        }
+        .subtitle {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* Main diagram */
+        .main-diagram {
+            background: rgba(0,0,0,0.2);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+            position: relative;
+        }
+        
+        /* Three columns layout */
+        .architecture-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+        
+        /* Column styles */
+        .column {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .column-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #666;
+            text-align: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        /* Component boxes */
+        .box {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 15px;
+            transition: all 0.3s;
+        }
+        .box:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        .box-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .box-content {
+            font-size: 11px;
+            color: #aaa;
+            line-height: 1.5;
+        }
+        .box-content li {
+            margin: 4px 0;
+            padding-left: 15px;
+            position: relative;
+        }
+        .box-content li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #00d9ff;
+        }
+        
+        /* Color coding */
+        .box.redis { border-color: rgba(255, 107, 107, 0.5); }
+        .box.redis .box-title { color: #ff6b6b; }
+        .box.kafka { border-color: rgba(162, 155, 254, 0.5); }
+        .box.kafka .box-title { color: #a29bfe; }
+        .box.postgres { border-color: rgba(78, 205, 196, 0.5); }
+        .box.postgres .box-title { color: #4ecdc4; }
+        .box.engine { border-color: rgba(255, 234, 167, 0.5); }
+        .box.engine .box-title { color: #ffeaa7; }
+        .box.service { border-color: rgba(116, 185, 255, 0.5); }
+        .box.service .box-title { color: #74b9ff; }
+        
+        /* Tags */
+        .tag {
+            display: inline-block;
+            font-size: 9px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-top: 8px;
+            margin-right: 5px;
+        }
+        .tag.sync { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+        .tag.async { background: rgba(162, 155, 254, 0.2); color: #a29bfe; }
+        .tag.hot { background: rgba(255, 234, 167, 0.2); color: #ffeaa7; }
+        .tag.cold { background: rgba(78, 205, 196, 0.2); color: #4ecdc4; }
+        
+        /* Flow arrows */
+        .flow-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 0;
+        }
+        .arrow-label {
+            background: rgba(0,0,0,0.5);
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 10px;
+            color: #888;
+        }
+        
+        /* Central engine section */
+        .engine-section {
+            background: rgba(255, 234, 167, 0.05);
+            border: 2px dashed rgba(255, 234, 167, 0.3);
+            border-radius: 15px;
+            padding: 20px;
+        }
+        .engine-title {
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffeaa7;
+            margin-bottom: 15px;
+        }
+        
+        /* Summary tables */
+        .summary-section {
+            margin-top: 40px;
+        }
+        .summary-title {
+            font-size: 18px;
+            color: #00d9ff;
+            margin-bottom: 20px;
+            padding-left: 15px;
+            border-left: 3px solid #00d9ff;
+        }
+        
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        
+        .summary-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 20px;
+            border-top: 3px solid;
+        }
+        .summary-card.redis { border-color: #ff6b6b; }
+        .summary-card.kafka { border-color: #a29bfe; }
+        .summary-card.postgres { border-color: #4ecdc4; }
+        
+        .summary-card h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .summary-card.redis h3 { color: #ff6b6b; }
+        .summary-card.kafka h3 { color: #a29bfe; }
+        .summary-card.postgres h3 { color: #4ecdc4; }
+        
+        .summary-table {
+            width: 100%;
+            font-size: 12px;
+        }
+        .summary-table td {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .summary-table td:first-child {
+            color: #888;
+            width: 40%;
+        }
+        
+        /* Data flow section */
+        .flow-section {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        .flow-title {
+            font-size: 16px;
+            color: #ffeaa7;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .flow-scenario {
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .scenario-title {
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #00d9ff;
+        }
+        .flow-steps {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .flow-step {
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .flow-step.redis { border-left: 2px solid #ff6b6b; }
+        .flow-step.kafka { border-left: 2px solid #a29bfe; }
+        .flow-step.postgres { border-left: 2px solid #4ecdc4; }
+        .flow-step.engine { border-left: 2px solid #ffeaa7; }
+        .flow-step .icon { font-size: 12px; }
+        .step-arrow {
+            color: #444;
+        }
+        .step-note {
+            font-size: 10px;
+            color: #666;
+            font-style: italic;
+        }
+        
+        /* When to use guide */
+        .when-section {
+            background: linear-gradient(135deg, rgba(0,217,255,0.1), rgba(162,155,254,0.1));
+            border: 1px solid rgba(0,217,255,0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        .when-title {
+            font-size: 16px;
+            color: #00d9ff;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .when-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        .when-card {
+            text-align: center;
+        }
+        .when-card h4 {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .when-card.redis h4 { color: #ff6b6b; }
+        .when-card.kafka h4 { color: #a29bfe; }
+        .when-card.postgres h4 { color: #4ecdc4; }
+        .when-card ul {
+            list-style: none;
+            font-size: 12px;
+            color: #aaa;
+        }
+        .when-card li {
+            margin: 6px 0;
+        }
+        .when-card .yes { color: #4ecdc4; }
+        .when-card .no { color: #ff6b6b; }
+        
+        @media (max-width: 1000px) {
+            .architecture-grid {
+                grid-template-columns: 1fr;
+            }
+            .summary-grid, .when-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🔄 Where Redis, Kafka, Database Fit In</h1>
+    <p class="subtitle">Data flow and when to use each component</p>
+    
+    <div class="container">
+        <!-- Main Architecture Diagram -->
+        <div class="main-diagram">
+            <div class="architecture-grid">
+                <!-- Left Column: Data Sources -->
+                <div class="column">
+                    <div class="column-title">Data Sources</div>
+                    
+                    <div class="box">
+                        <div class="box-title">📡 Exchange Feed</div>
+                        <ul class="box-content">
+                            <li>Price updates</li>
+                            <li>Order book</li>
+                            <li>Fill confirmations</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="box redis">
+                        <div class="box-title">⚡ Redis (Read)</div>
+                        <ul class="box-content">
+                            <li>Cross-engine inventory</li>
+                            <li>Global risk limits</li>
+                            <li>Strategy parameters</li>
+                            <li>Feature flags</li>
+                        </ul>
+                        <span class="tag sync">SYNC read</span>
+                        <span class="tag hot">Hot path</span>
+                    </div>
+                </div>
+                
+                <!-- Center Column: Trading Engine -->
+                <div class="column">
+                    <div class="column-title">Trading Engine (Hot Path)</div>
+                    
+                    <div class="engine-section">
+                        <div class="engine-title">⚡ Single Process Per Exchange</div>
+                        
+                        <div class="box engine">
+                            <div class="box-title">🧠 Strategy Engine</div>
+                            <ul class="box-content">
+                                <li>Receives price from feed</li>
+                                <li>Reads inventory from Redis (sync)</li>
+                                <li>Reads params from local cache</li>
+                                <li>Makes trade decision</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="flow-arrow">
+                            <span class="arrow-label">↓ decision made</span>
+                        </div>
+                        
+                        <div class="box engine">
+                            <div class="box-title">🚀 Executor</div>
+                            <ul class="box-content">
+                                <li>Sends order to exchange</li>
+                                <li>Receives fill confirmation</li>
+                                <li>Updates local state</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="flow-arrow">
+                            <span class="arrow-label">↓ after fill confirmed</span>
+                        </div>
+                        
+                        <div class="box engine">
+                            <div class="box-title">📤 Post-Execution (Async)</div>
+                            <ul class="box-content">
+                                <li>Write to Redis → update inventory</li>
+                                <li>Write to Kafka → log fill event</li>
+                                <li>Both non-blocking!</li>
+                            </ul>
+                            <span class="tag async">ASYNC write</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Column: Storage -->
+                <div class="column">
+                    <div class="column-title">Storage Layer</div>
+                    
+                    <div class="box redis">
+                        <div class="box-title">⚡ Redis (Write)</div>
+                        <ul class="box-content">
+                            <li>INCR inventory counters</li>
+                            <li>Update position state</li>
+                            <li>Publish config changes</li>
+                        </ul>
+                        <span class="tag async">ASYNC write</span>
+                        <span class="tag hot">~1ms</span>
+                    </div>
+                    
+                    <div class="box kafka">
+                        <div class="box-title">📜 Kafka</div>
+                        <ul class="box-content">
+                            <li>Every fill (with price!)</li>
+                            <li>Every order placed</li>
+                            <li>Every decision made</li>
+                            <li>PnL snapshots</li>
+                        </ul>
+                        <span class="tag async">ASYNC write</span>
+                        <span class="tag cold">Durable</span>
+                    </div>
+                    
+                    <div class="flow-arrow">
+                        <span class="arrow-label">↓ consumers</span>
+                    </div>
+                    
+                    <div class="box service">
+                        <div class="box-title">📊 Analytics Service</div>
+                        <ul class="box-content">
+                            <li>Consumes Kafka</li>
+                            <li>Calculates PnL</li>
+                            <li>Writes to Postgres</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="box postgres">
+                        <div class="box-title">🗄️ Postgres</div>
+                        <ul class="box-content">
+                            <li>Trade history</li>
+                            <li>Historical PnL</li>
+                            <li>Compliance reports</li>
+                        </ul>
+                        <span class="tag cold">Cold path only</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Summary Cards -->
+        <div class="summary-section">
+            <div class="summary-title">📊 Component Summary</div>
+            
+            <div class="summary-grid">
+                <div class="summary-card redis">
+                    <h3>⚡ Redis</h3>
+                    <table class="summary-table">
+                        <tr>
+                            <td>Purpose</td>
+                            <td>Fast state cache</td>
+                        </tr>
+                        <tr>
+                            <td>Latency</td>
+                            <td>~0.5-1ms</td>
+                        </tr>
+                        <tr>
+                            <td>Durability</td>
+                            <td>Low (rebuildable)</td>
+                        </tr>
+                        <tr>
+                            <td>In hot path?</td>
+                            <td><strong>YES - reads only</strong></td>
+                        </tr>
+                        <tr>
+                            <td>Data stored</td>
+                            <td>Inventory, limits, params</td>
+                        </tr>
+                        <tr>
+                            <td>Recovery</td>
+                            <td>Replay from Kafka</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="summary-card kafka">
+                    <h3>📜 Kafka</h3>
+                    <table class="summary-table">
+                        <tr>
+                            <td>Purpose</td>
+                            <td>Event log / Source of truth</td>
+                        </tr>
+                        <tr>
+                            <td>Latency</td>
+                            <td>~5-10ms (but async)</td>
+                        </tr>
+                        <tr>
+                            <td>Durability</td>
+                            <td><strong>HIGH</strong></td>
+                        </tr>
+                        <tr>
+                            <td>In hot path?</td>
+                            <td>NO - async writes only</td>
+                        </tr>
+                        <tr>
+                            <td>Data stored</td>
+                            <td>All events (fills, orders)</td>
+                        </tr>
+                        <tr>
+                            <td>Recovery</td>
+                            <td>Replay to rebuild anything</td>
+                        </tr>
+                    </table>
+                </div>
+                
+                <div class="summary-card postgres">
+                    <h3>🗄️ Postgres</h3>
+                    <table class="summary-table">
+                        <tr>
+                            <td>Purpose</td>
+                            <td>Queryable history</td>
+                        </tr>
+                        <tr>
+                            <td>Latency</td>
+                            <td>~10-100ms</td>
+                        </tr>
+                        <tr>
+                            <td>Durability</td>
+                            <td><strong>HIGH</strong></td>
+                        </tr>
+                        <tr>
+                            <td>In hot path?</td>
+                            <td>NEVER</td>
+                        </tr>
+                        <tr>
+                            <td>Data stored</td>
+                            <td>Historical trades, reports</td>
+                        </tr>
+                        <tr>
+                            <td>Recovery</td>
+                            <td>Rebuild from Kafka</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Data Flow Scenarios -->
+        <div class="flow-section">
+            <div class="flow-title">📍 Data Flow Examples</div>
+            
+            <div class="flow-scenario">
+                <div class="scenario-title">Scenario 1: Making a Trade Decision</div>
+                <div class="flow-steps">
+                    <div class="flow-step engine"><span class="icon">📡</span> Price update arrives</div>
+                    <span class="step-arrow">→</span>
+                    <div class="flow-step redis"><span class="icon">⚡</span> Read inventory from Redis</div>
+                    <span class="step-note">(sync, ~1ms)</span>
+                    <span class="step-arrow">→</span>
+                    <div class="flow-step engine"><span class="icon">🧠</span> Strategy decides: BUY</div>
+                    <span class="step-arrow">→</span>
+                    <div class="flow-step engine"><span class="icon">🚀</span> Execute order</div>
+                </div>
+            </div>
+            
+            <div class="flow-scenario">
+                <div class="scenario-title">Scenario 2: After Trade Executes</div>
+                <div class="flow-steps">
+                    <div class="flow-step engine"><span class="icon">✓</span> Fill confirmed</div>
+                    <span class="step-arrow">→</span>
+                    <div class="flow-step redis"><span class="icon">⚡</span> INCR eth_inventory 10</div>
+                    <span class="step-note">(async)</span>
+                    <span class="step-arrow">→</span>
+                    <div class="flow-step kafka"><span class="icon">📜</span> Publish fill event</div>
+                    <span class="step-note">(async, non-blocking)</span>
+                </div>
+            </div>
+            
+            <div class="flow-scenario">
+                <div class="scenario-title">Scenario 3: Analytics Pipeline (Cold Path)</div>
+                <div class="flow-steps">
+                    <div class="flow-step kafka"><span class="icon">📜</span> Fill event in Kafka</div>
+                    <span class="step-arrow">→</span>
+                    <div class="flow-step"><span class="icon">📊</span> Analytics consumes</div>
+                    <span class="step-arrow">→</span>
+                    <div class="flow-step"><span class="icon">🧮</span> Calculate PnL</div>
+                    <span class="step-arrow">→</span>
+                    <div class="flow-step postgres"><span class="icon">🗄️</span> Write to Postgres</div>
+                    <span class="step-note">(for dashboards, reports)</span>
+                </div>
+            </div>
+            
+            <div class="flow-scenario">
+                <div class="scenario-title">Scenario 4: Redis Crashes - Recovery</div>
+                <div class="flow-steps">
+                    <div class="flow-step" style="border-left: 2px solid #ff6b6b;"><span class="icon">💥</span> Redis down!</div>
+                    <span class="step-arrow">→</span>
+                    <div class="flow-step engine"><span class="icon">🛑</span> Trading paused</div>
+                    <span class="step-arrow">→</span>
+                    <div class="flow-step kafka"><span class="icon">📜</span> Replay fill events</div>
+                    <span class="step-arrow">→</span>
+                    <div class="flow-step redis"><span class="icon">⚡</span> Rebuild inventory</div>
+                    <span class="step-arrow">→</span>
+                    <div class="flow-step engine"><span class="icon">▶️</span> Resume trading</div>
+                </div>
+            </div>
+            
+            <div class="flow-scenario">
+                <div class="scenario-title">Scenario 5: Trader Updates Strategy Params</div>
+                <div class="flow-steps">
+                    <div class="flow-step"><span class="icon">👤</span> Trader: spread = 3bps</div>
+                    <span class="step-arrow">→</span>
+                    <div class="flow-step redis"><span class="icon">⚡</span> SET + PUBLISH</div>
+                    <span class="step-arrow">→</span>
+                    <div class="flow-step engine"><span class="icon">📡</span> Engine subscribes</div>
+                    <span class="step-arrow">→</span>
+                    <div class="flow-step engine"><span class="icon">🔄</span> Hot reload params</div>
+                    <span class="step-note">(instant, no restart)</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- When to Use -->
+        <div class="when-section">
+            <div class="when-title">🎯 Quick Decision Guide: Which Store to Use?</div>
+            
+            <div class="when-grid">
+                <div class="when-card redis">
+                    <h4>⚡ Use Redis When...</h4>
+                    <ul>
+                        <li class="yes">✓ Need sub-ms reads</li>
+                        <li class="yes">✓ Sharing state between engines</li>
+                        <li class="yes">✓ Data can be rebuilt</li>
+                        <li class="yes">✓ Config/params distribution</li>
+                        <li class="no">✗ NOT for durable storage</li>
+                        <li class="no">✗ NOT for historical queries</li>
+                    </ul>
+                </div>
+                
+                <div class="when-card kafka">
+                    <h4>📜 Use Kafka When...</h4>
+                    <ul>
+                        <li class="yes">✓ Event must be durable</li>
+                        <li class="yes">✓ Multiple consumers need it</li>
+                        <li class="yes">✓ Need replay capability</li>
+                        <li class="yes">✓ Source of truth for history</li>
+                        <li class="no">✗ NOT for real-time reads</li>
+                        <li class="no">✗ NOT in hot path</li>
+                    </ul>
+                </div>
+                
+                <div class="when-card postgres">
+                    <h4>🗄️ Use Postgres When...</h4>
+                    <ul>
+                        <li class="yes">✓ Complex queries needed</li>
+                        <li class="yes">✓ Reporting / dashboards</li>
+                        <li class="yes">✓ Compliance audits</li>
+                        <li class="yes">✓ Historical analysis</li>
+                        <li class="no">✗ NEVER in trading path</li>
+                        <li class="no">✗ NOT for real-time state</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

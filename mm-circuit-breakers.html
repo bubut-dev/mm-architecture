@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Circuit Breakers - MM Architecture</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #fff;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .back-link { color: #00d9ff; text-decoration: none; font-size: 14px; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { font-size: 32px; color: #00d9ff; margin: 20px 0; }
+        h2 { font-size: 22px; color: #4ecdc4; margin: 30px 0 15px 0; border-bottom: 1px solid rgba(78,205,196,0.3); padding-bottom: 10px; }
+        h3 { font-size: 18px; color: #ffeaa7; margin: 20px 0 10px 0; }
+        p { color: #ccc; line-height: 1.7; margin-bottom: 15px; }
+        .section { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.1); }
+        .code-block { background: #0d1117; border-radius: 8px; padding: 20px; margin: 15px 0; font-family: 'Monaco', 'Consolas', monospace; font-size: 13px; overflow-x: auto; border: 1px solid #30363d; }
+        .code-block code { color: #c9d1d9; }
+        .highlight { color: #79c0ff; }
+        .comment { color: #8b949e; }
+        .keyword { color: #ff7b72; }
+        .string { color: #a5d6ff; }
+        ul { margin: 15px 0 15px 25px; color: #ccc; }
+        li { margin: 8px 0; line-height: 1.6; }
+        .tag { display: inline-block; padding: 4px 12px; border-radius: 15px; font-size: 12px; margin: 3px; }
+        .tag.green { background: rgba(78,205,196,0.2); color: #4ecdc4; }
+        .tag.yellow { background: rgba(255,234,167,0.2); color: #ffeaa7; }
+        .tag.red { background: rgba(255,107,107,0.2); color: #ff6b6b; }
+        .trigger-card { background: rgba(255,107,107,0.1); border-left: 4px solid #ff6b6b; padding: 15px 20px; margin: 10px 0; border-radius: 0 8px 8px 0; }
+        .trigger-card h4 { color: #ff6b6b; margin-bottom: 8px; }
+        .trigger-card p { color: #ccc; margin: 0; font-size: 14px; }
+        .action-card { background: rgba(78,205,196,0.1); border-left: 4px solid #4ecdc4; padding: 15px 20px; margin: 10px 0; border-radius: 0 8px 8px 0; }
+        .action-card h4 { color: #4ecdc4; margin-bottom: 8px; }
+        .action-card p { color: #ccc; margin: 0; font-size: 14px; }
+        .nav-links { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .nav-links a { color: #00d9ff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Index</a>
+        <h1>🚨 Circuit Breakers</h1>
+        <p>Risk management: when and how to stop trading automatically.</p>
+
+        <div class="section">
+            <h2>Philosophy: Fail Safe</h2>
+            <p>The core principle: <strong>when uncertain, stop trading.</strong> You can always restart manually after investigation. The cost of missing opportunities is far less than the cost of runaway losses.</p>
+            <div class="code-block"><code>
+<span class="comment">// The golden rule</span>
+<span class="keyword">if</span> (uncertain || anomalyDetected) {
+    cancelAllOrders();
+    stopQuoting();
+    alertHumans();
+    <span class="comment">// Don't try to be clever - just stop</span>
+}
+            </code></div>
+        </div>
+
+        <div class="section">
+            <h2>Trigger Conditions</h2>
+            
+            <div class="trigger-card">
+                <h4>🔌 Connection Issues</h4>
+                <p>Exchange API disconnected or unreliable. Latency spikes above threshold. Can't trust your market data.</p>
+            </div>
+
+            <div class="trigger-card">
+                <h4>📉 PnL Thresholds</h4>
+                <p>Daily loss exceeds limit. Drawdown from peak too large. Getting picked off repeatedly.</p>
+            </div>
+
+            <div class="trigger-card">
+                <h4>📊 Position Limits</h4>
+                <p>Inventory exceeds safe levels. Exposure too concentrated in one direction.</p>
+            </div>
+
+            <div class="trigger-card">
+                <h4>🌊 Market Conditions</h4>
+                <p>Extreme volatility (black swan). Order book too thin. You're the only one quoting (dangerous).</p>
+            </div>
+
+            <div class="trigger-card">
+                <h4>⚡ Latency Anomalies</h4>
+                <p>Round-trip time exceeds threshold. Your quotes are stale. You're getting adversely selected.</p>
+            </div>
+
+            <div class="trigger-card">
+                <h4>❌ Error Rate Spike</h4>
+                <p>API errors increasing. Order rejections spiking. Something is wrong with the exchange or our system.</p>
+            </div>
+
+            <div class="trigger-card">
+                <h4>📈 Fill Rate Anomalies</h4>
+                <p>Getting filled unusually fast. Someone knows something you don't. Stop before you bleed out.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Actions When Triggered</h2>
+            
+            <div class="action-card">
+                <h4>1. Cancel All Open Orders</h4>
+                <p>Immediately remove all quotes from the market. Don't leave stale orders that can be picked off.</p>
+            </div>
+
+            <div class="action-card">
+                <h4>2. Stop Sending New Quotes</h4>
+                <p>Halt the quoting engine. No new orders until manually restarted or conditions normalize.</p>
+            </div>
+
+            <div class="action-card">
+                <h4>3. Alert Human Operators</h4>
+                <p>Page on-call, send Slack/Discord alert, trigger PagerDuty. Humans need to investigate.</p>
+            </div>
+
+            <div class="action-card">
+                <h4>4. Optionally Flatten Positions</h4>
+                <p>If inventory is risky, market-sell to reduce exposure. Accept slippage to reduce risk.</p>
+            </div>
+
+            <div class="action-card">
+                <h4>5. Log Everything</h4>
+                <p>Capture state at trigger time. Essential for post-mortem analysis.</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Implementation Pattern</h2>
+            <div class="code-block"><code>
+<span class="keyword">class</span> <span class="highlight">CircuitBreaker</span> {
+    <span class="keyword">private</span> state: <span class="string">'CLOSED'</span> | <span class="string">'OPEN'</span> | <span class="string">'HALF_OPEN'</span> = <span class="string">'CLOSED'</span>;
+    
+    <span class="keyword">private</span> thresholds = {
+        maxDailyLoss: <span class="highlight">10000</span>,       <span class="comment">// USD</span>
+        maxPositionSize: <span class="highlight">100000</span>,   <span class="comment">// USD notional</span>
+        maxLatencyMs: <span class="highlight">500</span>,         <span class="comment">// Round-trip</span>
+        maxErrorRate: <span class="highlight">0.05</span>,        <span class="comment">// 5% errors</span>
+        minBookDepth: <span class="highlight">10000</span>,       <span class="comment">// USD at best bid/ask</span>
+    };
+
+    <span class="keyword">check</span>(): <span class="keyword">void</span> {
+        <span class="keyword">if</span> (this.dailyPnL < -this.thresholds.maxDailyLoss) {
+            this.trip(<span class="string">'DAILY_LOSS_EXCEEDED'</span>);
+        }
+        
+        <span class="keyword">if</span> (this.position > this.thresholds.maxPositionSize) {
+            this.trip(<span class="string">'POSITION_LIMIT_EXCEEDED'</span>);
+        }
+        
+        <span class="keyword">if</span> (this.avgLatency > this.thresholds.maxLatencyMs) {
+            this.trip(<span class="string">'LATENCY_SPIKE'</span>);
+        }
+        
+        <span class="keyword">if</span> (this.errorRate > this.thresholds.maxErrorRate) {
+            this.trip(<span class="string">'ERROR_RATE_HIGH'</span>);
+        }
+        
+        <span class="keyword">if</span> (this.bookDepth < this.thresholds.minBookDepth) {
+            this.trip(<span class="string">'THIN_BOOK'</span>);
+        }
+    }
+
+    <span class="keyword">private</span> trip(reason: <span class="keyword">string</span>): <span class="keyword">void</span> {
+        <span class="keyword">if</span> (this.state === <span class="string">'OPEN'</span>) <span class="keyword">return</span>;
+        
+        this.state = <span class="string">'OPEN'</span>;
+        
+        <span class="comment">// Immediate actions</span>
+        this.orderManager.cancelAll();
+        this.quotingEngine.stop();
+        
+        <span class="comment">// Alert</span>
+        this.alertService.page({
+            severity: <span class="string">'CRITICAL'</span>,
+            reason: reason,
+            timestamp: Date.now(),
+            state: this.captureState()
+        });
+        
+        logger.error(<span class="string">`Circuit breaker tripped: ${reason}`</span>);
+    }
+
+    <span class="keyword">reset</span>(): <span class="keyword">void</span> {
+        <span class="comment">// Manual reset only - requires human approval</span>
+        this.state = <span class="string">'CLOSED'</span>;
+        logger.info(<span class="string">'Circuit breaker reset by operator'</span>);
+    }
+}
+            </code></div>
+        </div>
+
+        <div class="section">
+            <h2>Graduated Response</h2>
+            <p>Not all triggers require full shutdown. Consider graduated responses:</p>
+            
+            <div class="code-block"><code>
+<span class="comment">Level 1: CAUTION</span>
+  → Widen spreads
+  → Reduce position limits
+  → Increase monitoring
+
+<span class="comment">Level 2: REDUCE</span>
+  → Stop adding to positions
+  → Only allow risk-reducing trades
+  → Alert team
+
+<span class="comment">Level 3: HALT</span>
+  → Cancel all orders
+  → Stop quoting
+  → Page on-call
+
+<span class="comment">Level 4: EMERGENCY</span>
+  → Flatten all positions at market
+  → Full shutdown
+  → All hands on deck
+            </code></div>
+        </div>
+
+        <div class="section">
+            <h2>Quick Reference</h2>
+            <div class="code-block"><code>
+<span class="string">"Circuit breakers are essential risk management. Key triggers I'd monitor:</span>
+
+<span class="string">1. Connection health - if we lose the exchange feed, stop immediately</span>
+<span class="string">2. PnL thresholds - daily loss limits, drawdown limits</span>
+<span class="string">3. Position limits - don't let inventory get too large</span>
+<span class="string">4. Latency spikes - stale quotes get picked off</span>
+<span class="string">5. Market conditions - thin books, extreme volatility</span>
+
+<span class="string">When triggered: cancel all orders immediately, stop quoting,</span>
+<span class="string">alert humans, log state for analysis. The principle is fail-safe:</span>
+<span class="string">when uncertain, stop trading. You can always restart manually</span>
+<span class="string">after investigation."</span>
+            </code></div>
+        </div>
+
+        <div class="nav-links">
+            <a href="mm-networking.html">← Previous: Networking</a>
+            <a href="index.html">Back to Index</a>
+        </div>
+    </div>
+</body>
+</html>

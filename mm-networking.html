@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Networking & TCP Optimization - MM Architecture</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #fff;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .back-link { color: #00d9ff; text-decoration: none; font-size: 14px; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { font-size: 32px; color: #00d9ff; margin: 20px 0; }
+        h2 { font-size: 22px; color: #4ecdc4; margin: 30px 0 15px 0; border-bottom: 1px solid rgba(78,205,196,0.3); padding-bottom: 10px; }
+        h3 { font-size: 18px; color: #ffeaa7; margin: 20px 0 10px 0; }
+        p { color: #ccc; line-height: 1.7; margin-bottom: 15px; }
+        .section { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.1); }
+        .code-block { background: #0d1117; border-radius: 8px; padding: 20px; margin: 15px 0; font-family: 'Monaco', 'Consolas', monospace; font-size: 13px; overflow-x: auto; border: 1px solid #30363d; }
+        .code-block code { color: #c9d1d9; }
+        .highlight { color: #79c0ff; }
+        .comment { color: #8b949e; }
+        .keyword { color: #ff7b72; }
+        .string { color: #a5d6ff; }
+        ul { margin: 15px 0 15px 25px; color: #ccc; }
+        li { margin: 8px 0; line-height: 1.6; }
+        .tag { display: inline-block; padding: 4px 12px; border-radius: 15px; font-size: 12px; margin: 3px; }
+        .tag.green { background: rgba(78,205,196,0.2); color: #4ecdc4; }
+        .tag.yellow { background: rgba(255,234,167,0.2); color: #ffeaa7; }
+        .tag.red { background: rgba(255,107,107,0.2); color: #ff6b6b; }
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .comparison-table th, .comparison-table td { padding: 12px 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .comparison-table th { color: #00d9ff; font-weight: 600; }
+        .comparison-table td { color: #ccc; }
+        .nav-links { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .nav-links a { color: #00d9ff; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Index</a>
+        <h1>🌐 Networking & TCP Optimization</h1>
+        <p>Low-latency networking for trading systems. From TCP tuning to kernel bypass.</p>
+
+        <div class="section">
+            <h2>Network Stack Overview</h2>
+            <p>Understanding where optimizations can happen:</p>
+            <div class="code-block"><code>
+<span class="comment">┌─────────────────────────────────────────┐</span>
+<span class="comment">│</span> <span class="highlight">Application Layer</span>                       <span class="comment">│</span>
+<span class="comment">│</span>   WebSocket, FIX, Binary Protocols      <span class="comment">│</span>
+<span class="comment">├─────────────────────────────────────────┤</span>
+<span class="comment">│</span> <span class="highlight">Transport Layer</span>                         <span class="comment">│</span>
+<span class="comment">│</span>   TCP, UDP, QUIC                        <span class="comment">│</span>
+<span class="comment">├─────────────────────────────────────────┤</span>
+<span class="comment">│</span> <span class="highlight">Network Layer</span>                           <span class="comment">│</span>
+<span class="comment">│</span>   IP routing                            <span class="comment">│</span>
+<span class="comment">├─────────────────────────────────────────┤</span>
+<span class="comment">│</span> <span class="highlight">Link Layer</span>                              <span class="comment">│</span>
+<span class="comment">│</span>   Ethernet, NIC                         <span class="comment">│</span>
+<span class="comment">└─────────────────────────────────────────┘</span>
+
+WebSocket runs ON TOP of TCP.
+Kernel bypass (DPDK) operates at Link layer.
+            </code></div>
+        </div>
+
+        <div class="section">
+            <h2>TCP Socket Options</h2>
+            <h3>Essential Options for Low Latency</h3>
+            <div class="code-block"><code>
+<span class="comment">// Disable Nagle's algorithm - send small packets immediately</span>
+<span class="keyword">int</span> flag = <span class="highlight">1</span>;
+setsockopt(sock, IPPROTO_TCP, <span class="string">TCP_NODELAY</span>, &flag, sizeof(flag));
+
+<span class="comment">// Send ACKs immediately, don't delay</span>
+setsockopt(sock, IPPROTO_TCP, <span class="string">TCP_QUICKACK</span>, &flag, sizeof(flag));
+
+<span class="comment">// Tune buffer sizes for your use case</span>
+<span class="keyword">int</span> bufsize = <span class="highlight">1048576</span>;  <span class="comment">// 1MB</span>
+setsockopt(sock, SOL_SOCKET, <span class="string">SO_RCVBUF</span>, &bufsize, sizeof(bufsize));
+setsockopt(sock, SOL_SOCKET, <span class="string">SO_SNDBUF</span>, &bufsize, sizeof(bufsize));
+
+<span class="comment">// Enable keep-alive to detect dead connections</span>
+setsockopt(sock, SOL_SOCKET, <span class="string">SO_KEEPALIVE</span>, &flag, sizeof(flag));
+            </code></div>
+
+            <h3>Why TCP_NODELAY Matters</h3>
+            <p>Nagle's algorithm buffers small packets to reduce overhead. Great for bulk transfers, terrible for trading where you need immediate sends.</p>
+            <ul>
+                <li><strong>With Nagle:</strong> Waits up to 200ms to batch small writes</li>
+                <li><strong>With TCP_NODELAY:</strong> Sends immediately, even 1-byte packets</li>
+            </ul>
+        </div>
+
+        <div class="section">
+            <h2>Kernel Tuning (Linux)</h2>
+            <div class="code-block"><code>
+<span class="comment"># /etc/sysctl.conf for trading servers</span>
+
+<span class="comment"># Increase network buffer sizes</span>
+net.core.rmem_max = <span class="highlight">16777216</span>
+net.core.wmem_max = <span class="highlight">16777216</span>
+net.core.rmem_default = <span class="highlight">1048576</span>
+net.core.wmem_default = <span class="highlight">1048576</span>
+
+<span class="comment"># TCP memory settings</span>
+net.ipv4.tcp_rmem = <span class="highlight">4096 87380 16777216</span>
+net.ipv4.tcp_wmem = <span class="highlight">4096 65536 16777216</span>
+
+<span class="comment"># Increase backlog for high-connection servers</span>
+net.core.netdev_max_backlog = <span class="highlight">65536</span>
+net.core.somaxconn = <span class="highlight">65535</span>
+
+<span class="comment"># Low latency mode</span>
+net.ipv4.tcp_low_latency = <span class="highlight">1</span>
+
+<span class="comment"># Faster TIME_WAIT recycling</span>
+net.ipv4.tcp_tw_reuse = <span class="highlight">1</span>
+            </code></div>
+        </div>
+
+        <div class="section">
+            <h2>WebSocket vs QUIC</h2>
+            <table class="comparison-table">
+                <tr>
+                    <th>Aspect</th>
+                    <th>WebSocket (TCP)</th>
+                    <th>QUIC (UDP-based)</th>
+                </tr>
+                <tr>
+                    <td>Connection Setup</td>
+                    <td>TCP 3-way + HTTP upgrade</td>
+                    <td>0-RTT possible on reconnect</td>
+                </tr>
+                <tr>
+                    <td>Head-of-line Blocking</td>
+                    <td>Yes - one lost packet blocks all</td>
+                    <td>No - independent streams</td>
+                </tr>
+                <tr>
+                    <td>Built-in Encryption</td>
+                    <td>Optional (WSS)</td>
+                    <td>Always (TLS 1.3)</td>
+                </tr>
+                <tr>
+                    <td>Exchange Support</td>
+                    <td>Universal</td>
+                    <td>Limited (newer)</td>
+                </tr>
+                <tr>
+                    <td>Best For</td>
+                    <td>Stable connections</td>
+                    <td>Mobile, reconnects, lossy networks</td>
+                </tr>
+            </table>
+            <p><strong>Bottom line:</strong> For crypto trading over internet, WebSocket is standard and sufficient. QUIC advantages show up mainly in reconnect scenarios.</p>
+        </div>
+
+        <div class="section">
+            <h2>Kernel Bypass (Ultra-HFT)</h2>
+            <h3>When Standard TCP Isn't Fast Enough</h3>
+            <p>For co-located HFT, kernel processing adds ~10-50μs latency. Kernel bypass eliminates this:</p>
+
+            <h3>DPDK (Data Plane Development Kit)</h3>
+            <ul>
+                <li>User-space networking - bypass kernel entirely</li>
+                <li>Poll-mode drivers - no interrupt overhead</li>
+                <li>Direct NIC access via hugepages</li>
+                <li>Can achieve &lt;1μs latency</li>
+            </ul>
+
+            <h3>Other Options</h3>
+            <ul>
+                <li><strong>Solarflare OpenOnload:</strong> Kernel bypass stack, easier than DPDK</li>
+                <li><strong>RDMA:</strong> Remote Direct Memory Access - zero-copy networking</li>
+                <li><strong>Mellanox VMA:</strong> Similar to OpenOnload</li>
+            </ul>
+
+            <h3>Downsides of Kernel Bypass</h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;">
+                <span class="tag red">High complexity</span>
+                <span class="tag red">Specialized NICs required</span>
+                <span class="tag red">Dedicated CPU cores (poll mode)</span>
+                <span class="tag red">Lose kernel features (firewall, routing)</span>
+                <span class="tag red">Expensive hardware + expertise</span>
+                <span class="tag yellow">Only for local/co-located networks</span>
+            </div>
+
+            <p style="margin-top: 20px;"><strong>For crypto over internet:</strong> Network latency (10-100ms) dwarfs any kernel overhead. Optimized TCP is sufficient. Kernel bypass is for sub-microsecond co-located trading.</p>
+        </div>
+
+        <div class="section">
+            <h2>WebSocket Connection Lifecycle</h2>
+            <div class="code-block"><code>
+<span class="comment">1. Initial Handshake (once)</span>
+   Client → Server: HTTP Upgrade request
+   Server → Client: 101 Switching Protocols
+   
+<span class="comment">2. Connection Established</span>
+   Persistent TCP connection
+   Full-duplex messaging
+   
+<span class="comment">3. Message Flow (no per-message handshake)</span>
+   Messages use lightweight framing:
+   - Opcode (1 byte)
+   - Length (1-8 bytes)  
+   - Payload
+   
+<span class="comment">4. Keep-Alive</span>
+   Ping/Pong frames detect dead connections
+   
+<span class="comment">5. TCP handles reliability underneath</span>
+   ACKs, retransmits - transparent to app
+            </code></div>
+            <p><strong>Key insight:</strong> One handshake, then messages flow freely. Very efficient for high-frequency updates.</p>
+        </div>
+
+        <div class="section">
+            <h2>Quick Reference</h2>
+            <div class="code-block"><code>
+<span class="string">"For low-latency trading, I'd apply several TCP optimizations:</span>
+
+<span class="string">1. TCP_NODELAY to disable Nagle's algorithm - we need</span>
+<span class="string">   immediate sends, not batching.</span>
+
+<span class="string">2. TCP_QUICKACK for immediate acknowledgments.</span>
+
+<span class="string">3. Tune kernel buffer sizes based on our throughput.</span>
+
+<span class="string">For crypto over internet, optimized TCP is sufficient since</span>
+<span class="string">network latency dominates. For ultra-HFT in co-location,</span>
+<span class="string">we'd consider kernel bypass with DPDK or Solarflare,</span>
+<span class="string">but that comes with significant complexity and cost."</span>
+            </code></div>
+        </div>
+
+        <div class="nav-links">
+            <a href="mm-circuit-breakers.html">→ Next: Circuit Breakers</a>
+            <a href="index.html">Back to Index</a>
+        </div>
+    </div>
+</body>
+</html>

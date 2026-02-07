@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MM Service Architecture & Deployment</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #fff;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 26px;
+            color: #00d9ff;
+        }
+        .subtitle {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .section {
+            max-width: 1200px;
+            margin: 0 auto 40px;
+        }
+        .section-title {
+            font-size: 18px;
+            color: #00d9ff;
+            margin-bottom: 20px;
+            padding-left: 15px;
+            border-left: 3px solid #00d9ff;
+        }
+        
+        /* Decision Box */
+        .decision-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+        .decision-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #ffeaa7;
+        }
+        .decision-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .option {
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        .option:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        .option.recommended {
+            border-color: rgba(78, 205, 196, 0.5);
+            background: rgba(78, 205, 196, 0.05);
+        }
+        .option-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            background: rgba(78, 205, 196, 0.2);
+            color: #4ecdc4;
+        }
+        .option-desc {
+            font-size: 13px;
+            color: #aaa;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+        .pros-cons {
+            font-size: 12px;
+        }
+        .pros-cons li {
+            margin: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        .pros-cons li.pro::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4ecdc4;
+        }
+        .pros-cons li.con::before {
+            content: "✗";
+            position: absolute;
+            left: 0;
+            color: #ff6b6b;
+        }
+        
+        /* Architecture Diagram */
+        .arch-diagram {
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        .diagram-title {
+            text-align: center;
+            font-size: 16px;
+            margin-bottom: 25px;
+            color: #4ecdc4;
+        }
+        .diagram-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+        
+        /* Process boxes */
+        .process-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .process {
+            background: rgba(255,255,255,0.05);
+            border: 2px dashed rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 20px;
+            min-width: 280px;
+        }
+        .process.monolith {
+            border-color: rgba(78, 205, 196, 0.5);
+            background: rgba(78, 205, 196, 0.05);
+        }
+        .process.microservice {
+            border-color: rgba(162, 155, 254, 0.5);
+            background: rgba(162, 155, 254, 0.05);
+            min-width: 150px;
+        }
+        .process-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .process.monolith .process-title { color: #4ecdc4; }
+        .process.microservice .process-title { color: #a29bfe; }
+        
+        .component {
+            background: rgba(0,0,0,0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin: 8px 0;
+            font-size: 12px;
+        }
+        .component-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .component-detail {
+            color: #888;
+            font-size: 11px;
+        }
+        
+        .arrow-down {
+            color: #00d9ff;
+            font-size: 20px;
+        }
+        
+        /* Strategy Update Section */
+        .strategy-section {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 25px;
+        }
+        .update-methods {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .method {
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            padding: 15px;
+            border-left: 3px solid #00d9ff;
+        }
+        .method-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .method-desc {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 10px;
+        }
+        .method-example {
+            background: rgba(0,0,0,0.3);
+            border-radius: 6px;
+            padding: 10px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 11px;
+            color: #4ecdc4;
+            overflow-x: auto;
+        }
+        .method-tag {
+            display: inline-block;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-top: 8px;
+        }
+        .method-tag.hot { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+        .method-tag.warm { background: rgba(255, 234, 167, 0.2); color: #ffeaa7; }
+        .method-tag.cold { background: rgba(78, 205, 196, 0.2); color: #4ecdc4; }
+        
+        /* Flow diagram */
+        .flow-box {
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        .flow-title {
+            font-size: 16px;
+            color: #ffeaa7;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .flow-steps {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .flow-step {
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 10px 15px;
+            font-size: 12px;
+            text-align: center;
+        }
+        .flow-arrow {
+            color: #00d9ff;
+            font-size: 16px;
+        }
+        
+        /* Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 13px;
+        }
+        .comparison-table th, .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .comparison-table th {
+            color: #888;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .comparison-table td:first-child {
+            color: #00d9ff;
+        }
+        
+        /* Insight */
+        .insight {
+            background: linear-gradient(135deg, rgba(255,234,167,0.1), rgba(255,107,107,0.1));
+            border: 1px solid rgba(255,234,167,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        .insight-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffeaa7;
+            margin-bottom: 10px;
+        }
+        .insight-text {
+            font-size: 13px;
+            color: #ccc;
+            line-height: 1.6;
+        }
+        
+        @media (max-width: 768px) {
+            .decision-grid, .process-group {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🏗️ MM Service Architecture & Strategy Deployment</h1>
+    <p class="subtitle">Monolith vs Microservices & How to Update Strategies</p>
+    
+    <!-- Decision: Mono vs Micro -->
+    <div class="section">
+        <div class="section-title">Q1: Microservices or Monolith?</div>
+        
+        <div class="decision-box">
+            <div class="decision-title">The Answer: Hybrid — Monolith for Hot Path, Microservices for Cold Path</div>
+            
+            <div class="decision-grid">
+                <div class="option recommended">
+                    <div class="option-title">
+                        🚀 Hot Path = Monolith
+                        <span class="badge">RECOMMENDED</span>
+                    </div>
+                    <div class="option-desc">
+                        Feed → Strategy → Executor in ONE process. No network hops, shared memory, minimal latency.
+                    </div>
+                    <ul class="pros-cons">
+                        <li class="pro">Lowest latency (no serialization)</li>
+                        <li class="pro">Shared memory for state</li>
+                        <li class="pro">Atomic operations</li>
+                        <li class="pro">Simpler debugging</li>
+                        <li class="con">Restart = brief downtime</li>
+                        <li class="con">One crash affects all</li>
+                    </ul>
+                </div>
+                
+                <div class="option">
+                    <div class="option-title">
+                        🔧 Cold Path = Microservices
+                    </div>
+                    <div class="option-desc">
+                        Analytics, Compliance, Reconciliation as separate services. Can scale/update independently.
+                    </div>
+                    <ul class="pros-cons">
+                        <li class="pro">Independent scaling</li>
+                        <li class="pro">Fault isolation</li>
+                        <li class="pro">Different languages OK</li>
+                        <li class="pro">Update without touching trading</li>
+                        <li class="con">More infra complexity</li>
+                        <li class="con">Network latency (acceptable here)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Architecture Diagram -->
+        <div class="arch-diagram">
+            <div class="diagram-title">⚡ Recommended Architecture: Hybrid</div>
+            
+            <div class="diagram-content">
+                <div class="process-group">
+                    <div class="process monolith">
+                        <div class="process-title">Trading Engine (Single Process per Exchange)</div>
+                        <div class="component">
+                            <div class="component-name">📡 Feed Handler</div>
+                            <div class="component-detail">WS connection, parse messages</div>
+                        </div>
+                        <div class="component">
+                            <div class="component-name">🧠 Strategy Engine</div>
+                            <div class="component-detail">Decision logic, in-memory state</div>
+                        </div>
+                        <div class="component">
+                            <div class="component-name">🚀 Executor</div>
+                            <div class="component-detail">Order submission, fill handling</div>
+                        </div>
+                        <div class="component">
+                            <div class="component-name">📊 Local State</div>
+                            <div class="component-detail">Positions, orders, PnL (in-memory)</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="arrow-down">↓ async writes</div>
+                
+                <div class="process-group">
+                    <div class="process microservice">
+                        <div class="process-title">Redis</div>
+                        <div class="component">
+                            <div class="component-name">Shared State</div>
+                            <div class="component-detail">Cross-engine inventory</div>
+                        </div>
+                    </div>
+                    
+                    <div class="process microservice">
+                        <div class="process-title">Kafka</div>
+                        <div class="component">
+                            <div class="component-name">Event Stream</div>
+                            <div class="component-detail">All trades, decisions</div>
+                        </div>
+                    </div>
+                    
+                    <div class="process microservice">
+                        <div class="process-title">Config Service</div>
+                        <div class="component">
+                            <div class="component-name">Strategy Params</div>
+                            <div class="component-detail">Thresholds, limits</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="arrow-down">↓ consume events</div>
+                
+                <div class="process-group">
+                    <div class="process microservice">
+                        <div class="process-title">Analytics</div>
+                        <div class="component">
+                            <div class="component-detail">PnL, metrics</div>
+                        </div>
+                    </div>
+                    
+                    <div class="process microservice">
+                        <div class="process-title">Compliance</div>
+                        <div class="component">
+                            <div class="component-detail">Audit logs</div>
+                        </div>
+                    </div>
+                    
+                    <div class="process microservice">
+                        <div class="process-title">Reconciler</div>
+                        <div class="component">
+                            <div class="component-detail">Verify state</div>
+                        </div>
+                    </div>
+                    
+                    <div class="process microservice">
+                        <div class="process-title">Alerting</div>
+                        <div class="component">
+                            <div class="component-detail">PagerDuty, Slack</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Strategy Storage & Updates -->
+    <div class="section">
+        <div class="section-title">Q2: How to Store & Update the Strategy?</div>
+        
+        <div class="strategy-section">
+            <div class="decision-title">Strategy has two parts: Logic + Parameters</div>
+            
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Part</th>
+                        <th>What it is</th>
+                        <th>Where to store</th>
+                        <th>How to update</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Logic (Code)</td>
+                        <td>The algorithm itself</td>
+                        <td>Compiled binary (Rust/Go/C++)</td>
+                        <td>Redeploy (blue/green)</td>
+                    </tr>
+                    <tr>
+                        <td>Parameters</td>
+                        <td>Thresholds, spreads, limits</td>
+                        <td>Config file / Redis / DB</td>
+                        <td>Hot reload (no restart)</td>
+                    </tr>
+                    <tr>
+                        <td>Feature Flags</td>
+                        <td>Enable/disable behaviors</td>
+                        <td>Redis / Config service</td>
+                        <td>Instant toggle</td>
+                    </tr>
+                    <tr>
+                        <td>Risk Limits</td>
+                        <td>Max position, daily loss</td>
+                        <td>Redis (shared)</td>
+                        <td>Hot reload</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="update-methods">
+                <div class="method">
+                    <div class="method-title">1️⃣ Config-Driven Parameters</div>
+                    <div class="method-desc">Store strategy params in Redis/YAML. Engine polls or subscribes for changes.</div>
+                    <div class="method-example">
+# strategy_config.yaml<br>
+spread_bps: 5<br>
+max_position_eth: 100<br>
+min_profit_threshold: 0.001<br>
+enabled_pairs: [ETH/USDT, BTC/USDT]
+                    </div>
+                    <span class="method-tag warm">Warm reload (seconds)</span>
+                </div>
+                
+                <div class="method">
+                    <div class="method-title">2️⃣ Redis Pub/Sub for Instant Updates</div>
+                    <div class="method-desc">Subscribe to config channel. Changes apply immediately.</div>
+                    <div class="method-example">
+// On startup<br>
+redis.subscribe("strategy:config")<br><br>
+// On message<br>
+fn on_config_update(new_params) {<br>
+&nbsp;&nbsp;strategy.update_params(new_params)<br>
+}
+                    </div>
+                    <span class="method-tag hot">Hot reload (instant)</span>
+                </div>
+                
+                <div class="method">
+                    <div class="method-title">3️⃣ Blue/Green Deployment</div>
+                    <div class="method-desc">For logic changes. Run two versions, shift traffic gradually.</div>
+                    <div class="method-example">
+v1 (blue) ← 100% traffic<br>
+v2 (green) ← 0% traffic<br><br>
+# Gradual shift<br>
+v1 ← 50% | v2 ← 50%<br>
+v1 ← 0%  | v2 ← 100% ✓
+                    </div>
+                    <span class="method-tag cold">Cold deploy (minutes)</span>
+                </div>
+                
+                <div class="method">
+                    <div class="method-title">4️⃣ Strategy as Plugin (Advanced)</div>
+                    <div class="method-desc">Load strategy from shared lib or WASM. Swap without restart.</div>
+                    <div class="method-example">
+// Load strategy at runtime<br>
+let strategy = load_plugin(<br>
+&nbsp;&nbsp;"strategies/mm_v2.so"<br>
+);<br><br>
+// Hot swap<br>
+engine.set_strategy(strategy);
+                    </div>
+                    <span class="method-tag hot">Hot swap (advanced)</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recommended Approach -->
+        <div class="flow-box">
+            <div class="flow-title">🎯 Recommended Approach for Acheron-style MM</div>
+            
+            <div class="flow-steps">
+                <div class="flow-step">
+                    <strong>Strategy Logic</strong><br>
+                    Compiled Rust/Go binary
+                </div>
+                <div class="flow-arrow">+</div>
+                <div class="flow-step">
+                    <strong>Parameters</strong><br>
+                    Redis with pub/sub
+                </div>
+                <div class="flow-arrow">+</div>
+                <div class="flow-step">
+                    <strong>Risk Limits</strong><br>
+                    Redis (shared state)
+                </div>
+                <div class="flow-arrow">+</div>
+                <div class="flow-step">
+                    <strong>Deploy</strong><br>
+                    K8s blue/green
+                </div>
+            </div>
+            
+            <div class="insight">
+                <div class="insight-title">💡 Key Insight</div>
+                <div class="insight-text">
+                    "For a market maker, I'd use a <strong>hybrid architecture</strong>: the hot path (feed → strategy → execution) is a monolith for minimal latency, while cold path services (analytics, compliance) are microservices consuming from Kafka.<br><br>
+                    
+                    For strategy updates: <strong>separate logic from parameters</strong>. Logic is compiled and deployed via blue/green. Parameters (spreads, thresholds, limits) live in Redis with pub/sub — so traders can tune without engineering deploys.<br><br>
+                    
+                    This gives you <strong>speed where it matters</strong> (trading) and <strong>flexibility where you need it</strong> (tuning, monitoring)."
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

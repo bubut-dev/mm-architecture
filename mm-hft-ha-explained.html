@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HFT vs HA Explained</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #fff;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 26px;
+            color: #00d9ff;
+        }
+        .subtitle {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #888;
+            font-size: 14px;
+        }
+        
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        
+        /* Definition cards */
+        .definitions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        .def-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 25px;
+            border-top: 4px solid;
+        }
+        .def-card.hft { border-color: #ff6b6b; }
+        .def-card.ha { border-color: #4ecdc4; }
+        .def-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        .def-card.hft .def-title { color: #ff6b6b; }
+        .def-card.ha .def-title { color: #4ecdc4; }
+        .def-full {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 15px;
+        }
+        .def-meaning {
+            font-size: 18px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        .def-details {
+            font-size: 13px;
+            color: #aaa;
+        }
+        .def-details li {
+            margin: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        .def-details li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #00d9ff;
+        }
+        
+        /* Spectrum visualization */
+        .spectrum-section {
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+        .section-title {
+            font-size: 18px;
+            color: #00d9ff;
+            margin-bottom: 25px;
+            padding-left: 15px;
+            border-left: 3px solid #00d9ff;
+        }
+        
+        .spectrum {
+            position: relative;
+            height: 120px;
+            margin: 30px 0;
+        }
+        .spectrum-bar {
+            height: 8px;
+            background: linear-gradient(to right, #ff6b6b, #ffeaa7, #4ecdc4);
+            border-radius: 4px;
+            position: relative;
+        }
+        .spectrum-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 11px;
+            color: #888;
+        }
+        .spectrum-marker {
+            position: absolute;
+            top: -45px;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+        .marker-label {
+            font-size: 11px;
+            color: #fff;
+            background: rgba(0,0,0,0.5);
+            padding: 4px 10px;
+            border-radius: 10px;
+            white-space: nowrap;
+        }
+        .marker-line {
+            width: 2px;
+            height: 30px;
+            background: #fff;
+            margin: 5px auto 0;
+        }
+        
+        /* Speed comparison */
+        .speed-section {
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .speed-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-top: 20px;
+        }
+        .speed-card {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 25px;
+            border: 2px solid transparent;
+        }
+        .speed-card.winner {
+            border-color: rgba(78, 205, 196, 0.4);
+        }
+        .speed-card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge {
+            font-size: 9px;
+            padding: 3px 8px;
+            border-radius: 10px;
+        }
+        .badge.fastest { background: rgba(78, 205, 196, 0.2); color: #4ecdc4; }
+        .badge.slower { background: rgba(255, 234, 167, 0.2); color: #ffeaa7; }
+        
+        /* Timeline visualization */
+        .timeline-box {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .timeline-title {
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 10px;
+        }
+        .timeline-bar {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            margin: 10px 0;
+        }
+        .time-segment {
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            border-radius: 4px;
+            color: #fff;
+        }
+        .time-segment.strategy { background: #ffeaa7; color: #000; }
+        .time-segment.redis { background: #ff6b6b; }
+        .time-segment.execute { background: #4ecdc4; }
+        .time-segment.wait { background: #666; }
+        
+        .time-total {
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        /* Comparison table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            margin-top: 25px;
+        }
+        .comparison-table th, .comparison-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .comparison-table th {
+            color: #888;
+            font-size: 11px;
+            text-transform: uppercase;
+        }
+        .comparison-table td:first-child {
+            color: #00d9ff;
+        }
+        .good { color: #4ecdc4; }
+        .bad { color: #ff6b6b; }
+        .neutral { color: #ffeaa7; }
+        
+        /* Use cases */
+        .use-cases {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 25px;
+        }
+        .use-case {
+            background: rgba(255,255,255,0.03);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 3px solid;
+        }
+        .use-case.passive { border-color: #ff6b6b; }
+        .use-case.active { border-color: #4ecdc4; }
+        .use-case-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        .use-case.passive .use-case-title { color: #ff6b6b; }
+        .use-case.active .use-case-title { color: #4ecdc4; }
+        .use-case-list {
+            font-size: 12px;
+            color: #aaa;
+        }
+        .use-case-list li {
+            margin: 6px 0;
+        }
+        
+        /* Key insight */
+        .insight {
+            background: linear-gradient(135deg, rgba(0,217,255,0.1), rgba(162,155,254,0.1));
+            border: 1px solid rgba(0,217,255,0.3);
+            border-radius: 12px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        .insight-title {
+            color: #00d9ff;
+            font-weight: 600;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        .insight-text {
+            font-size: 14px;
+            color: #ccc;
+            line-height: 1.7;
+        }
+        .insight-text strong {
+            color: #fff;
+        }
+        
+        /* Companies list */
+        .companies {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        .company {
+            background: rgba(255,255,255,0.05);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+        
+        @media (max-width: 768px) {
+            .definitions, .speed-comparison, .use-cases {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>📚 HFT & HA Explained</h1>
+    <p class="subtitle">Key concepts for trading system architecture</p>
+    
+    <div class="container">
+        <!-- Definitions -->
+        <div class="definitions">
+            <div class="def-card hft">
+                <div class="def-title">HFT</div>
+                <div class="def-full">High-Frequency Trading</div>
+                <div class="def-meaning">
+                    Trading strategy that executes thousands/millions of orders per second, competing on <strong>microseconds</strong>.
+                </div>
+                <ul class="def-details">
+                    <li>Latency measured in <strong>microseconds (μs)</strong> or nanoseconds</li>
+                    <li>Servers co-located at exchange (same building)</li>
+                    <li>Makes tiny profit per trade, but millions of trades</li>
+                    <li>Custom hardware (FPGAs), kernel bypass networking</li>
+                    <li>Every microsecond of overhead = money lost</li>
+                </ul>
+                <div class="companies">
+                    <span class="company">Citadel Securities</span>
+                    <span class="company">Virtu</span>
+                    <span class="company">Jump Trading</span>
+                    <span class="company">Tower Research</span>
+                </div>
+            </div>
+            
+            <div class="def-card ha">
+                <div class="def-title">HA</div>
+                <div class="def-full">High Availability</div>
+                <div class="def-meaning">
+                    System design ensuring your service stays <strong>online</strong> even when components fail.
+                </div>
+                <ul class="def-details">
+                    <li>Measured in "nines": 99.9% = 8.7 hours downtime/year</li>
+                    <li>99.99% (4 nines) = 52 minutes downtime/year</li>
+                    <li>Achieved through <strong>redundancy</strong> (multiple instances)</li>
+                    <li>Automatic failover when primary fails</li>
+                    <li>Goal: never stop trading due to single component failure</li>
+                </ul>
+                <div class="companies">
+                    <span class="company" style="background: rgba(78,205,196,0.1);">Every serious trading firm</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Trading Speed Spectrum -->
+        <div class="spectrum-section">
+            <div class="section-title">⚡ Trading Speed Spectrum</div>
+            
+            <div class="spectrum">
+                <div class="spectrum-marker" style="left: 5%;">
+                    <div class="marker-label">HFT<br>~1-10 μs</div>
+                    <div class="marker-line"></div>
+                </div>
+                <div class="spectrum-marker" style="left: 30%;">
+                    <div class="marker-label">Low-Latency MM<br>~100 μs - 1 ms</div>
+                    <div class="marker-line"></div>
+                </div>
+                <div class="spectrum-marker" style="left: 55%;">
+                    <div class="marker-label">Standard MM<br>~1-10 ms</div>
+                    <div class="marker-line"></div>
+                </div>
+                <div class="spectrum-marker" style="left: 80%;">
+                    <div class="marker-label">Retail/Manual<br>~100ms - 1s</div>
+                    <div class="marker-line"></div>
+                </div>
+                <div class="spectrum-bar"></div>
+                <div class="spectrum-labels">
+                    <span>Faster (μs)</span>
+                    <span>Slower (seconds)</span>
+                </div>
+            </div>
+            
+            <p style="text-align: center; font-size: 13px; color: #888; margin-top: 20px;">
+                <strong>Acheron Trading</strong> likely operates in the "Standard MM" range (1-10ms).<br>
+                This means ~1ms Redis overhead is acceptable — you're not competing with HFT firms on speed.
+            </p>
+        </div>
+        
+        <!-- Speed Comparison -->
+        <div class="speed-section">
+            <div class="section-title">🏎️ Which is Faster? Active-Passive vs Active-Active</div>
+            
+            <p style="margin-bottom: 20px; color: #aaa; font-size: 14px;">
+                The answer depends on what you mean by "fast":
+            </p>
+            
+            <div class="speed-comparison">
+                <div class="speed-card winner">
+                    <div class="speed-card-title">
+                        Active-Passive
+                        <span class="badge fastest">FASTER PER ORDER</span>
+                    </div>
+                    
+                    <div class="timeline-box">
+                        <div class="timeline-title">Order execution path:</div>
+                        <div class="timeline-bar">
+                            <div class="time-segment strategy" style="width: 30%;">Strategy<br>~0.1ms</div>
+                            <div class="time-segment execute" style="width: 70%;">Execute<br>~5ms</div>
+                        </div>
+                        <div class="time-total good">Total: ~5.1ms</div>
+                    </div>
+                    
+                    <p style="font-size: 12px; color: #aaa; margin-top: 15px;">
+                        ✓ No Redis call before order<br>
+                        ✓ Local pending state only<br>
+                        ✓ Fastest possible per-order latency
+                    </p>
+                </div>
+                
+                <div class="speed-card">
+                    <div class="speed-card-title">
+                        Active-Active + Redis
+                        <span class="badge slower">~1ms SLOWER</span>
+                    </div>
+                    
+                    <div class="timeline-box">
+                        <div class="timeline-title">Order execution path:</div>
+                        <div class="timeline-bar">
+                            <div class="time-segment strategy" style="width: 25%;">Strategy<br>~0.1ms</div>
+                            <div class="time-segment redis" style="width: 15%;">Redis<br>~1ms</div>
+                            <div class="time-segment execute" style="width: 60%;">Execute<br>~5ms</div>
+                        </div>
+                        <div class="time-total neutral">Total: ~6.1ms</div>
+                    </div>
+                    
+                    <p style="font-size: 12px; color: #aaa; margin-top: 15px;">
+                        ✗ Redis call adds ~1ms<br>
+                        ✓ Both instances always ready<br>
+                        ✓ No failover delay if one dies
+                    </p>
+                </div>
+            </div>
+            
+            <div class="section-title" style="margin-top: 40px;">⚠️ But What About Failover?</div>
+            
+            <div class="speed-comparison">
+                <div class="speed-card">
+                    <div class="speed-card-title">
+                        Active-Passive
+                        <span class="badge" style="background: rgba(255,107,107,0.2); color: #ff6b6b;">SLOW FAILOVER</span>
+                    </div>
+                    
+                    <div class="timeline-box">
+                        <div class="timeline-title">When primary dies:</div>
+                        <div class="timeline-bar">
+                            <div class="time-segment wait" style="width: 40%;">Detect failure<br>~1-2s</div>
+                            <div class="time-segment wait" style="width: 40%;">Election<br>~1-3s</div>
+                            <div class="time-segment execute" style="width: 20%;">Resume</div>
+                        </div>
+                        <div class="time-total bad">Downtime: 2-5 seconds</div>
+                    </div>
+                    
+                    <p style="font-size: 12px; color: #aaa; margin-top: 15px;">
+                        During those 2-5 seconds:<br>
+                        • No orders sent<br>
+                        • Missing market opportunities<br>
+                        • Open positions not managed
+                    </p>
+                </div>
+                
+                <div class="speed-card winner">
+                    <div class="speed-card-title">
+                        Active-Active + Redis
+                        <span class="badge fastest">INSTANT FAILOVER</span>
+                    </div>
+                    
+                    <div class="timeline-box">
+                        <div class="timeline-title">When one instance dies:</div>
+                        <div class="timeline-bar">
+                            <div class="time-segment execute" style="width: 100%;">Other instance keeps trading!<br>0ms downtime</div>
+                        </div>
+                        <div class="time-total good">Downtime: 0 seconds</div>
+                    </div>
+                    
+                    <p style="font-size: 12px; color: #aaa; margin-top: 15px;">
+                        The other instance was already trading!<br>
+                        • No detection needed<br>
+                        • No election needed<br>
+                        • Zero interruption
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Summary Table -->
+            <table class="comparison-table">
+                <tr>
+                    <th>Metric</th>
+                    <th>Active-Passive</th>
+                    <th>Active-Active + Redis</th>
+                    <th>Winner</th>
+                </tr>
+                <tr>
+                    <td>Per-order latency</td>
+                    <td class="good">~5ms (no Redis)</td>
+                    <td class="neutral">~6ms (+1ms Redis)</td>
+                    <td class="good">Active-Passive</td>
+                </tr>
+                <tr>
+                    <td>Failover time</td>
+                    <td class="bad">2-5 seconds</td>
+                    <td class="good">0 seconds</td>
+                    <td class="good">Active-Active</td>
+                </tr>
+                <tr>
+                    <td>Missed opportunities</td>
+                    <td class="bad">Yes (during failover)</td>
+                    <td class="good">No</td>
+                    <td class="good">Active-Active</td>
+                </tr>
+                <tr>
+                    <td>Resource efficiency</td>
+                    <td class="bad">50% (standby idle)</td>
+                    <td class="good">100%</td>
+                    <td class="good">Active-Active</td>
+                </tr>
+                <tr>
+                    <td>Complexity</td>
+                    <td class="good">Simple</td>
+                    <td class="neutral">Medium</td>
+                    <td class="good">Active-Passive</td>
+                </tr>
+            </table>
+        </div>
+        
+        <!-- When to Use -->
+        <div class="spectrum-section">
+            <div class="section-title">🎯 When to Use Each</div>
+            
+            <div class="use-cases">
+                <div class="use-case passive">
+                    <div class="use-case-title">Use Active-Passive When:</div>
+                    <ul class="use-case-list">
+                        <li>You're doing <strong>HFT</strong> (every microsecond matters)</li>
+                        <li>Redis ~1ms overhead is unacceptable</li>
+                        <li>You have other redundancy (multiple strategies/exchanges)</li>
+                        <li>Brief failover gaps are acceptable</li>
+                        <li>Simplicity is valued</li>
+                    </ul>
+                </div>
+                
+                <div class="use-case active">
+                    <div class="use-case-title">Use Active-Active + Redis When:</div>
+                    <ul class="use-case-list">
+                        <li>You're doing <strong>standard MM</strong> (milliseconds are fine)</li>
+                        <li>~1ms overhead is acceptable</li>
+                        <li>Zero downtime is critical</li>
+                        <li>You want to use all your hardware</li>
+                        <li>Failover gaps = missed money</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="insight">
+                <div class="insight-title">💡 Key Insight</div>
+                <div class="insight-text">
+                    "The choice depends on where you are on the latency spectrum. For <strong>HFT</strong> where you're competing in microseconds, Active-Passive makes sense — you can't afford the ~1ms Redis overhead on every order. The 2-5 second failover gap is acceptable because you're also diversified across strategies and exchanges.<br><br>
+                    
+                    For <strong>standard market making</strong> like Acheron (millisecond-level), I'd recommend <strong>Active-Active with Redis coordination</strong>. The ~1ms overhead is noise when your orders take 5-50ms to reach the exchange anyway. And the <strong>instant failover</strong> means you never miss an opportunity or leave positions unmanaged.<br><br>
+                    
+                    The real question is: <strong>is 1ms overhead worth zero-downtime failover?</strong> For most crypto MM, the answer is yes."
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

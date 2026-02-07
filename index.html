@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Maker Architecture - Trading Systems Reference</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #fff;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+        h1 {
+            font-size: 36px;
+            color: #00d9ff;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+        .interview-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, rgba(78, 205, 196, 0.2), rgba(0, 217, 255, 0.2));
+            border: 1px solid rgba(78, 205, 196, 0.4);
+            padding: 10px 25px;
+            border-radius: 25px;
+            font-size: 14px;
+            color: #4ecdc4;
+        }
+        
+        /* Cards Grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 40px;
+        }
+        
+        .card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 25px;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        .card:hover {
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(0, 217, 255, 0.3);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .card-number {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .card-icon {
+            font-size: 32px;
+            margin-bottom: 15px;
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+        .card-desc {
+            font-size: 13px;
+            color: #888;
+            line-height: 1.5;
+            margin-bottom: 15px;
+        }
+        .card-topics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .topic-tag {
+            font-size: 10px;
+            padding: 4px 10px;
+            background: rgba(0, 217, 255, 0.1);
+            color: #00d9ff;
+            border-radius: 12px;
+        }
+        
+        /* Color coding by category */
+        .card.architecture { border-left: 4px solid #4ecdc4; }
+        .card.comparison { border-left: 4px solid #ffeaa7; }
+        .card.deep-dive { border-left: 4px solid #ff6b6b; }
+        .card.concepts { border-left: 4px solid #a29bfe; }
+        
+        /* Quick links */
+        .quick-links {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 50px;
+            flex-wrap: wrap;
+        }
+        .quick-link {
+            font-size: 13px;
+            color: #888;
+            text-decoration: none;
+            padding: 8px 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            transition: all 0.2s;
+        }
+        .quick-link:hover {
+            border-color: rgba(0, 217, 255, 0.4);
+            color: #00d9ff;
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 60px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            color: #666;
+            font-size: 13px;
+        }
+        .footer a {
+            color: #00d9ff;
+            text-decoration: none;
+        }
+        
+        /* Legend */
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin-top: 30px;
+            font-size: 12px;
+            color: #888;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+        }
+        .legend-color.architecture { background: #4ecdc4; }
+        .legend-color.comparison { background: #ffeaa7; }
+        .legend-color.deep-dive { background: #ff6b6b; }
+        .legend-color.concepts { background: #a29bfe; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏦 Market Maker Architecture</h1>
+            <p class="subtitle">Trading Systems Engineering Reference</p>
+            <div class="interview-badge">📚 Trading Systems Engineering Reference</div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color architecture"></div>
+                <span>Architecture</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color comparison"></div>
+                <span>Comparison</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color deep-dive"></div>
+                <span>Deep Dive</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color concepts"></div>
+                <span>Concepts</span>
+            </div>
+        </div>
+        
+        <div class="cards-grid">
+            <!-- Card 1: DEX Architecture -->
+            <a href="dex-mm-architecture.html" class="card architecture">
+                <div class="card-number">01 — Architecture</div>
+                <div class="card-icon">⛓️</div>
+                <div class="card-title">DEX Market Maker Architecture</div>
+                <div class="card-desc">
+                    Complete architecture for decentralized exchange market making. 
+                    Covers on-chain data, trading engine, state management, and recovery flows.
+                </div>
+                <div class="card-topics">
+                    <span class="topic-tag">Geyser/WebSocket</span>
+                    <span class="topic-tag">Kafka as Source of Truth</span>
+                    <span class="topic-tag">Wallet Balance</span>
+                    <span class="topic-tag">Cost Basis Tracking</span>
+                </div>
+            </a>
+            
+            <!-- Card 2: CEX vs DEX -->
+            <a href="cex-mm-architecture.html" class="card comparison">
+                <div class="card-number">02 — Comparison</div>
+                <div class="card-icon">⚖️</div>
+                <div class="card-title">CEX vs DEX Architecture</div>
+                <div class="card-desc">
+                    Side-by-side comparison of centralized vs decentralized exchange 
+                    market making. Key differences in latency, state management, and recovery.
+                </div>
+                <div class="card-topics">
+                    <span class="topic-tag">Exchange API vs On-chain</span>
+                    <span class="topic-tag">Custody Models</span>
+                    <span class="topic-tag">MEV Risk</span>
+                    <span class="topic-tag">Execution Flow</span>
+                </div>
+            </a>
+            
+            <!-- Card 3: Microservices & Deployment -->
+            <a href="mm-deployment-architecture.html" class="card architecture">
+                <div class="card-number">03 — Architecture</div>
+                <div class="card-icon">🏗️</div>
+                <div class="card-title">Service Architecture & Deployment</div>
+                <div class="card-desc">
+                    Monolith vs microservices for trading systems. How to store and 
+                    update strategies with hot reload and blue/green deployment.
+                </div>
+                <div class="card-topics">
+                    <span class="topic-tag">Hybrid Architecture</span>
+                    <span class="topic-tag">Hot Path vs Cold Path</span>
+                    <span class="topic-tag">Strategy Updates</span>
+                    <span class="topic-tag">Config Management</span>
+                </div>
+            </a>
+            
+            <!-- Card 4: Data Flow -->
+            <a href="mm-data-flow.html" class="card deep-dive">
+                <div class="card-number">04 — Deep Dive</div>
+                <div class="card-icon">🔄</div>
+                <div class="card-title">Redis, Kafka, Database Data Flow</div>
+                <div class="card-desc">
+                    Where each storage component fits in. When to use Redis vs Kafka vs 
+                    Postgres. Complete data flow scenarios for trading operations.
+                </div>
+                <div class="card-topics">
+                    <span class="topic-tag">Redis (Fast Cache)</span>
+                    <span class="topic-tag">Kafka (Event Log)</span>
+                    <span class="topic-tag">Postgres (History)</span>
+                    <span class="topic-tag">Recovery Flows</span>
+                </div>
+            </a>
+            
+            <!-- Card 5: Order State -->
+            <a href="mm-order-state.html" class="card deep-dive">
+                <div class="card-number">05 — Deep Dive</div>
+                <div class="card-icon">📋</div>
+                <div class="card-title">Pending vs Confirmed State</div>
+                <div class="card-desc">
+                    How to track order state to avoid double-buying. Virtual/pending 
+                    position management and effective position calculations.
+                </div>
+                <div class="card-topics">
+                    <span class="topic-tag">Effective Position</span>
+                    <span class="topic-tag">Race Conditions</span>
+                    <span class="topic-tag">Order Lifecycle</span>
+                    <span class="topic-tag">Instance Coordination</span>
+                </div>
+            </a>
+            
+            <!-- Card 6: HA Coordination -->
+            <a href="mm-ha-coordination.html" class="card deep-dive">
+                <div class="card-number">06 — Deep Dive</div>
+                <div class="card-icon">🔀</div>
+                <div class="card-title">HA Coordination Patterns</div>
+                <div class="card-desc">
+                    How to coordinate multiple instances trading the same pair. 
+                    Active-Passive vs Active-Active with Redis atomic locks.
+                </div>
+                <div class="card-topics">
+                    <span class="topic-tag">Leader Election</span>
+                    <span class="topic-tag">Redis Lua Scripts</span>
+                    <span class="topic-tag">Atomic Reservation</span>
+                    <span class="topic-tag">Failover</span>
+                </div>
+            </a>
+            
+            <!-- Card 7: HFT & HA Explained -->
+            <a href="mm-hft-ha-explained.html" class="card concepts">
+                <div class="card-number">07 — Concepts</div>
+                <div class="card-icon">📚</div>
+                <div class="card-title">HFT & HA Explained</div>
+                <div class="card-desc">
+                    Key concepts: High-Frequency Trading and High Availability. 
+                    Speed comparison and when to use each pattern.
+                </div>
+                <div class="card-topics">
+                    <span class="topic-tag">Latency Spectrum</span>
+                    <span class="topic-tag">Failover Times</span>
+                    <span class="topic-tag">Trade-offs</span>
+                    <span class="topic-tag">Key Concepts</span>
+                </div>
+            </a>
+            
+            <!-- Card 8: HFT Failover Math -->
+            <a href="mm-hft-failover-math.html" class="card deep-dive">
+                <div class="card-number">08 — Deep Dive</div>
+                <div class="card-icon">🤔</div>
+                <div class="card-title">Why HFT Accepts 2-5s Failover</div>
+                <div class="card-desc">
+                    The math behind the apparent contradiction: competing at nanoseconds 
+                    but accepting seconds of downtime. Cumulative cost analysis.
+                </div>
+                <div class="card-topics">
+                    <span class="topic-tag">Cumulative Latency</span>
+                    <span class="topic-tag">Diversification</span>
+                    <span class="topic-tag">Per-Trade Speed</span>
+                    <span class="topic-tag">The Sprinter Analogy</span>
+                </div>
+            </a>
+            
+            <!-- Card 9: Failure Scenarios -->
+            <a href="mm-failure-scenarios.html" class="card deep-dive">
+                <div class="card-number">09 — Deep Dive</div>
+                <div class="card-icon">💥</div>
+                <div class="card-title">Failure Scenarios & Recovery</div>
+                <div class="card-desc">
+                    What can go wrong and how the architecture handles it. Leader election,
+                    split brain prevention, and fail-safe behavior.
+                </div>
+                <div class="card-topics">
+                    <span class="topic-tag">Leader Election</span>
+                    <span class="topic-tag">Heartbeat TTL</span>
+                    <span class="topic-tag">Split Brain</span>
+                    <span class="topic-tag">Fencing Tokens</span>
+                </div>
+            </a>
+            
+            <!-- Card 10: Networking -->
+            <a href="mm-networking.html" class="card deep-dive">
+                <div class="card-number">10 — Deep Dive</div>
+                <div class="card-icon">🌐</div>
+                <div class="card-title">Networking & TCP Optimization</div>
+                <div class="card-desc">
+                    Low-latency networking for trading systems. TCP tuning, WebSocket vs QUIC,
+                    and when to consider kernel bypass.
+                </div>
+                <div class="card-topics">
+                    <span class="topic-tag">TCP_NODELAY</span>
+                    <span class="topic-tag">Kernel Tuning</span>
+                    <span class="topic-tag">DPDK</span>
+                    <span class="topic-tag">WebSocket</span>
+                </div>
+            </a>
+            
+            <!-- Card 11: Circuit Breakers -->
+            <a href="mm-circuit-breakers.html" class="card deep-dive">
+                <div class="card-number">11 — Deep Dive</div>
+                <div class="card-icon">🚨</div>
+                <div class="card-title">Circuit Breakers</div>
+                <div class="card-desc">
+                    Risk management: when and how to stop trading automatically.
+                    Triggers, actions, and graduated response patterns.
+                </div>
+                <div class="card-topics">
+                    <span class="topic-tag">PnL Limits</span>
+                    <span class="topic-tag">Latency Spikes</span>
+                    <span class="topic-tag">Fail Safe</span>
+                    <span class="topic-tag">Alerting</span>
+                </div>
+            </a>
+            
+            <!-- Card 12: Ring Buffer & Hot/Cold Path -->
+            <a href="mm-ring-buffer.html" class="card architecture">
+                <div class="card-number">12 — Architecture</div>
+                <div class="card-icon">🔄</div>
+                <div class="card-title">Ring Buffer & Hot/Cold Path</div>
+                <div class="card-desc">
+                    Decoupling latency-critical operations from background processing.
+                    Lock-free handoff patterns and LMAX Disruptor.
+                </div>
+                <div class="card-topics">
+                    <span class="topic-tag">Hot Path</span>
+                    <span class="topic-tag">Cold Path</span>
+                    <span class="topic-tag">Lock-Free</span>
+                    <span class="topic-tag">LMAX Disruptor</span>
+                </div>
+            </a>
+        </div>
+        
+        <div class="quick-links">
+            <a href="dex-mm-architecture.html" class="quick-link">Start: DEX Architecture →</a>
+            <a href="mm-hft-ha-explained.html" class="quick-link">Concepts: HFT & HA →</a>
+        </div>
+        
+        <div class="footer">
+            Trading Systems Architecture Reference
+        </div>
+    </div>
+</body>
+</html>

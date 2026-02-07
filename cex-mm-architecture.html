@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CEX vs DEX Market Maker Architecture</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #fff;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+            color: #00d9ff;
+        }
+        .subtitle {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #888;
+            font-size: 14px;
+        }
+        
+        /* Comparison Layout */
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .architecture {
+            background: rgba(0,0,0,0.2);
+            border-radius: 20px;
+            padding: 25px;
+        }
+        .architecture.cex {
+            border: 2px solid rgba(78, 205, 196, 0.3);
+        }
+        .architecture.dex {
+            border: 2px solid rgba(255, 107, 107, 0.3);
+        }
+        
+        .arch-title {
+            text-align: center;
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .cex .arch-title { color: #4ecdc4; }
+        .dex .arch-title { color: #ff6b6b; }
+        
+        .arch-subtitle {
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+            margin-bottom: 25px;
+        }
+        
+        .layer {
+            margin-bottom: 20px;
+        }
+        .layer-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #666;
+            margin-bottom: 10px;
+            padding-left: 8px;
+            border-left: 2px solid #00d9ff;
+        }
+        
+        .components {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .component {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+        .component:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateX(3px);
+        }
+        .component-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .component-desc {
+            font-size: 11px;
+            color: #aaa;
+            line-height: 1.4;
+        }
+        .tag {
+            display: inline-block;
+            font-size: 9px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-top: 8px;
+        }
+        .tag.fast { background: rgba(78, 205, 196, 0.2); color: #4ecdc4; }
+        .tag.slow { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+        .tag.source { background: rgba(255, 234, 167, 0.2); color: #ffeaa7; }
+        .tag.cache { background: rgba(162, 155, 254, 0.2); color: #a29bfe; }
+        
+        /* Flow arrow between components */
+        .flow-arrow {
+            text-align: center;
+            color: #444;
+            font-size: 18px;
+            padding: 5px 0;
+        }
+        
+        /* Differences Section */
+        .differences {
+            max-width: 1600px;
+            margin: 40px auto 0;
+            background: rgba(0,0,0,0.3);
+            border-radius: 20px;
+            padding: 30px;
+        }
+        .diff-title {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #00d9ff;
+            text-align: center;
+        }
+        .diff-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .diff-table th, .diff-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .diff-table th {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #888;
+        }
+        .diff-table th:nth-child(2) { color: #4ecdc4; }
+        .diff-table th:nth-child(3) { color: #ff6b6b; }
+        .diff-table td {
+            font-size: 13px;
+        }
+        .diff-table td:first-child {
+            color: #00d9ff;
+            font-weight: 500;
+        }
+        .diff-table tr:hover td {
+            background: rgba(255,255,255,0.02);
+        }
+        .checkmark { color: #4ecdc4; }
+        .crossmark { color: #ff6b6b; }
+        
+        /* Key Insight Box */
+        .insight {
+            background: linear-gradient(135deg, rgba(0,217,255,0.1), rgba(162,155,254,0.1));
+            border: 1px solid rgba(0,217,255,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        .insight-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #00d9ff;
+            margin-bottom: 10px;
+        }
+        .insight-text {
+            font-size: 13px;
+            color: #ccc;
+            line-height: 1.6;
+        }
+        .insight-text strong {
+            color: #fff;
+        }
+        
+        /* Flow Diagram Section */
+        .flow-section {
+            max-width: 1600px;
+            margin: 40px auto 0;
+        }
+        .flow-comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+        .flow-box {
+            background: rgba(0,0,0,0.2);
+            border-radius: 15px;
+            padding: 20px;
+        }
+        .flow-box.cex { border-left: 3px solid #4ecdc4; }
+        .flow-box.dex { border-left: 3px solid #ff6b6b; }
+        .flow-box h3 {
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .flow-box.cex h3 { color: #4ecdc4; }
+        .flow-box.dex h3 { color: #ff6b6b; }
+        .flow-step {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 8px 0;
+            font-size: 12px;
+        }
+        .step-num {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .cex .step-num { background: rgba(78, 205, 196, 0.2); color: #4ecdc4; }
+        .dex .step-num { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+        .step-text { color: #ccc; }
+        .step-time {
+            margin-left: auto;
+            font-size: 10px;
+            color: #888;
+            background: rgba(255,255,255,0.05);
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+        
+        @media (max-width: 1200px) {
+            .comparison, .flow-comparison {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🏦 CEX vs ⛓️ DEX Market Maker Architecture</h1>
+    <p class="subtitle">Side-by-side comparison of key architectural differences</p>
+    
+    <div class="comparison">
+        <!-- CEX Architecture -->
+        <div class="architecture cex">
+            <div class="arch-title">📊 CEX Architecture</div>
+            <div class="arch-subtitle">Binance, OKX, Coinbase, etc.</div>
+            
+            <div class="layer">
+                <div class="layer-title">Data Source</div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-title">📡 Exchange WebSocket</div>
+                        <div class="component-desc">
+                            Order book updates, trade stream, user data (fills, balance changes)
+                        </div>
+                        <span class="tag fast">~1-10ms latency</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flow-arrow">↓</div>
+            
+            <div class="layer">
+                <div class="layer-title">Trading Engine</div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-title">🧠 Strategy Engine</div>
+                        <div class="component-desc">
+                            Receives fills via WebSocket user stream. Exchange tells you: "Order filled at price X"
+                        </div>
+                        <span class="tag source">Exchange = source of truth</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flow-arrow">↓</div>
+            
+            <div class="layer">
+                <div class="layer-title">Execution</div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-title">🚀 REST/WS Order API</div>
+                        <div class="component-desc">
+                            Submit limit/market orders. Exchange matches instantly. Response includes fill info.
+                        </div>
+                        <span class="tag fast">~5-50ms round trip</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flow-arrow">↓</div>
+            
+            <div class="layer">
+                <div class="layer-title">State Management</div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-title">⚡ Redis (Cache)</div>
+                        <div class="component-desc">
+                            Aggregate inventory, risk limits. Can rebuild by querying exchange balance API.
+                        </div>
+                        <span class="tag cache">Rebuildable from Exchange</span>
+                    </div>
+                    <div class="component">
+                        <div class="component-title">📜 Kafka (Log)</div>
+                        <div class="component-desc">
+                            Trade history, PnL tracking, compliance. Async write after execution.
+                        </div>
+                        <span class="tag cache">Audit trail</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flow-arrow">↓</div>
+            
+            <div class="layer">
+                <div class="layer-title">Recovery</div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-title">🔄 Exchange Balance API</div>
+                        <div class="component-desc">
+                            Query /account/balance — exchange returns exact positions. No tracking needed!
+                        </div>
+                        <span class="tag source">Ground truth = Exchange</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- DEX Architecture -->
+        <div class="architecture dex">
+            <div class="arch-title">⛓️ DEX Architecture</div>
+            <div class="arch-subtitle">Uniswap, Raydium, Jupiter, etc.</div>
+            
+            <div class="layer">
+                <div class="layer-title">Data Source</div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-title">📡 Blockchain Feed</div>
+                        <div class="component-desc">
+                            Geyser (Solana), WebSocket (Ethereum). Pool reserves, wallet changes, tx confirmations.
+                        </div>
+                        <span class="tag slow">~400ms-12s (block time)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flow-arrow">↓</div>
+            
+            <div class="layer">
+                <div class="layer-title">Trading Engine</div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-title">🧠 Strategy Engine</div>
+                        <div class="component-desc">
+                            Detects tx confirmation on-chain. Must track fill price internally (Kafka).
+                        </div>
+                        <span class="tag source">You = source of truth for cost</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flow-arrow">↓</div>
+            
+            <div class="layer">
+                <div class="layer-title">Execution</div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-title">🚀 Transaction Submission</div>
+                        <div class="component-desc">
+                            Build tx, sign with wallet, submit to RPC. Wait for block inclusion. MEV protection?
+                        </div>
+                        <span class="tag slow">~400ms-30s (+ MEV risk)</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flow-arrow">↓</div>
+            
+            <div class="layer">
+                <div class="layer-title">State Management</div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-title">⚡ Redis (Cache)</div>
+                        <div class="component-desc">
+                            Aggregate inventory, cost basis cache. Rebuild from Kafka.
+                        </div>
+                        <span class="tag cache">Rebuildable from Kafka</span>
+                    </div>
+                    <div class="component">
+                        <div class="component-title">📜 Kafka (Source of Truth)</div>
+                        <div class="component-desc">
+                            Every fill logged with price. This is YOUR record — chain doesn't track your cost basis!
+                        </div>
+                        <span class="tag source">Source of truth for cost basis</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flow-arrow">↓</div>
+            
+            <div class="layer">
+                <div class="layer-title">Recovery</div>
+                <div class="components">
+                    <div class="component">
+                        <div class="component-title">🔄 On-Chain Wallet + Kafka</div>
+                        <div class="component-desc">
+                            Wallet balance from chain (quantity). Cost basis from Kafka replay (price history).
+                        </div>
+                        <span class="tag source">Two sources needed!</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Key Differences Table -->
+    <div class="differences">
+        <div class="diff-title">⚖️ Key Differences</div>
+        <table class="diff-table">
+            <thead>
+                <tr>
+                    <th>Aspect</th>
+                    <th>CEX</th>
+                    <th>DEX</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Custody</td>
+                    <td>Exchange holds funds</td>
+                    <td>Self-custody (your wallet)</td>
+                </tr>
+                <tr>
+                    <td>Position Source of Truth</td>
+                    <td>Exchange API <span class="checkmark">✓</span></td>
+                    <td>On-chain wallet balance</td>
+                </tr>
+                <tr>
+                    <td>Cost Basis Source</td>
+                    <td>Exchange trade history API <span class="checkmark">✓</span></td>
+                    <td>Your Kafka logs <span class="crossmark">(you track it)</span></td>
+                </tr>
+                <tr>
+                    <td>Execution Latency</td>
+                    <td>5-50ms <span class="checkmark">✓</span></td>
+                    <td>400ms-30s (block time)</td>
+                </tr>
+                <tr>
+                    <td>Transaction Fees</td>
+                    <td>Trading fee only (~0.1%)</td>
+                    <td>Gas + trading fee</td>
+                </tr>
+                <tr>
+                    <td>MEV Risk</td>
+                    <td>None <span class="checkmark">✓</span></td>
+                    <td>Frontrunning, sandwich attacks</td>
+                </tr>
+                <tr>
+                    <td>Rate Limits</td>
+                    <td>API rate limits (requests/min)</td>
+                    <td>None (but gas costs)</td>
+                </tr>
+                <tr>
+                    <td>Recovery Complexity</td>
+                    <td>Simple — query exchange <span class="checkmark">✓</span></td>
+                    <td>Complex — chain + Kafka replay</td>
+                </tr>
+                <tr>
+                    <td>Reconciliation</td>
+                    <td>Compare local vs exchange API</td>
+                    <td>Compare Kafka sum vs on-chain wallet</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="insight">
+            <div class="insight-title">💡 Key Architectural Insight</div>
+            <div class="insight-text">
+                <strong>CEX:</strong> The exchange is your database. It tracks everything — balances, fills, PnL. Your Kafka is just an audit copy. Recovery = call exchange API.<br><br>
+                <strong>DEX:</strong> The blockchain only knows <strong>current wallet balance</strong>. It doesn't track your entry prices, your PnL, or your trade history. <strong>You must maintain that state yourself.</strong> Kafka becomes critical — it's not just for compliance, it's your source of truth for cost basis and realized PnL.<br><br>
+                <strong>This is why DEX MM is architecturally more complex:</strong> you need durable internal state that the CEX would give you for free.
+            </div>
+        </div>
+    </div>
+    
+    <!-- Trade Flow Comparison -->
+    <div class="flow-section">
+        <div class="diff-title" style="text-align: center; margin-bottom: 20px; color: #00d9ff;">📍 Trade Execution Flow Comparison</div>
+        <div class="flow-comparison">
+            <div class="flow-box cex">
+                <h3>CEX: Buy 10 ETH</h3>
+                <div class="flow-step">
+                    <span class="step-num">1</span>
+                    <span class="step-text">Strategy decides to buy</span>
+                    <span class="step-time">0ms</span>
+                </div>
+                <div class="flow-step">
+                    <span class="step-num">2</span>
+                    <span class="step-text">POST /order → Exchange</span>
+                    <span class="step-time">5ms</span>
+                </div>
+                <div class="flow-step">
+                    <span class="step-num">3</span>
+                    <span class="step-text">Exchange matches, returns fill</span>
+                    <span class="step-time">15ms</span>
+                </div>
+                <div class="flow-step">
+                    <span class="step-num">4</span>
+                    <span class="step-text">WS user stream confirms fill</span>
+                    <span class="step-time">20ms</span>
+                </div>
+                <div class="flow-step">
+                    <span class="step-num">5</span>
+                    <span class="step-text">Update Redis + log to Kafka</span>
+                    <span class="step-time">22ms</span>
+                </div>
+                <div class="flow-step">
+                    <span class="step-num">✓</span>
+                    <span class="step-text"><strong>Done. Exchange tracks everything.</strong></span>
+                    <span class="step-time">~25ms total</span>
+                </div>
+            </div>
+            
+            <div class="flow-box dex">
+                <h3>DEX: Buy 10 ETH (Solana)</h3>
+                <div class="flow-step">
+                    <span class="step-num">1</span>
+                    <span class="step-text">Strategy decides to buy</span>
+                    <span class="step-time">0ms</span>
+                </div>
+                <div class="flow-step">
+                    <span class="step-num">2</span>
+                    <span class="step-text">Build swap tx (compute quote)</span>
+                    <span class="step-time">10ms</span>
+                </div>
+                <div class="flow-step">
+                    <span class="step-num">3</span>
+                    <span class="step-text">Sign with wallet key</span>
+                    <span class="step-time">15ms</span>
+                </div>
+                <div class="flow-step">
+                    <span class="step-num">4</span>
+                    <span class="step-text">Submit to RPC, wait for slot</span>
+                    <span class="step-time">~400ms</span>
+                </div>
+                <div class="flow-step">
+                    <span class="step-num">5</span>
+                    <span class="step-text">Geyser confirms tx included</span>
+                    <span class="step-time">~450ms</span>
+                </div>
+                <div class="flow-step">
+                    <span class="step-num">6</span>
+                    <span class="step-text">Parse tx logs for actual fill price</span>
+                    <span class="step-time">~455ms</span>
+                </div>
+                <div class="flow-step">
+                    <span class="step-num">7</span>
+                    <span class="step-text">Log fill + price to Kafka (critical!)</span>
+                    <span class="step-time">~460ms</span>
+                </div>
+                <div class="flow-step">
+                    <span class="step-num">8</span>
+                    <span class="step-text">Update Redis cache</span>
+                    <span class="step-time">~462ms</span>
+                </div>
+                <div class="flow-step">
+                    <span class="step-num">✓</span>
+                    <span class="step-text"><strong>Done. You own the fill history.</strong></span>
+                    <span class="step-time">~500ms total</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

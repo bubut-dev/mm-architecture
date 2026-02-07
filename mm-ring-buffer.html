@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ring Buffer & Hot/Cold Path - MM Architecture</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #fff;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .back-link { color: #00d9ff; text-decoration: none; font-size: 14px; }
+        .back-link:hover { text-decoration: underline; }
+        h1 { font-size: 32px; color: #00d9ff; margin: 20px 0; }
+        h2 { font-size: 22px; color: #4ecdc4; margin: 30px 0 15px 0; border-bottom: 1px solid rgba(78,205,196,0.3); padding-bottom: 10px; }
+        h3 { font-size: 18px; color: #ffeaa7; margin: 20px 0 10px 0; }
+        p { color: #ccc; line-height: 1.7; margin-bottom: 15px; }
+        .section { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 25px; margin: 20px 0; border: 1px solid rgba(255,255,255,0.1); }
+        .code-block { background: #0d1117; border-radius: 8px; padding: 20px; margin: 15px 0; font-family: 'Monaco', 'Consolas', monospace; font-size: 13px; overflow-x: auto; border: 1px solid #30363d; }
+        .code-block code { color: #c9d1d9; white-space: pre; }
+        .highlight { color: #79c0ff; }
+        .comment { color: #8b949e; }
+        .keyword { color: #ff7b72; }
+        .string { color: #a5d6ff; }
+        .number { color: #79c0ff; }
+        ul { margin: 15px 0 15px 25px; color: #ccc; }
+        li { margin: 8px 0; line-height: 1.6; }
+        .tag { display: inline-block; padding: 4px 12px; border-radius: 15px; font-size: 12px; margin: 3px; }
+        .tag.green { background: rgba(78,205,196,0.2); color: #4ecdc4; }
+        .tag.yellow { background: rgba(255,234,167,0.2); color: #ffeaa7; }
+        .tag.red { background: rgba(255,107,107,0.2); color: #ff6b6b; }
+        .tag.purple { background: rgba(162,155,254,0.2); color: #a29bfe; }
+        .hot-card { background: rgba(255,107,107,0.1); border-left: 4px solid #ff6b6b; padding: 15px 20px; margin: 10px 0; border-radius: 0 8px 8px 0; }
+        .hot-card h4 { color: #ff6b6b; margin-bottom: 8px; }
+        .hot-card p { color: #ccc; margin: 0; font-size: 14px; }
+        .cold-card { background: rgba(78,205,196,0.1); border-left: 4px solid #4ecdc4; padding: 15px 20px; margin: 10px 0; border-radius: 0 8px 8px 0; }
+        .cold-card h4 { color: #4ecdc4; margin-bottom: 8px; }
+        .cold-card p { color: #ccc; margin: 0; font-size: 14px; }
+        .warning { background: rgba(255,234,167,0.1); border-left: 4px solid #ffeaa7; padding: 15px 20px; margin: 15px 0; border-radius: 0 8px 8px 0; }
+        .warning strong { color: #ffeaa7; }
+        .diagram { background: #0d1117; border-radius: 8px; padding: 25px; margin: 20px 0; font-family: 'Monaco', 'Consolas', monospace; font-size: 12px; overflow-x: auto; border: 1px solid #30363d; color: #8b949e; text-align: center; }
+        .nav-links { display: flex; justify-content: space-between; margin-top: 40px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+        .nav-links a { color: #00d9ff; text-decoration: none; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        th { color: #4ecdc4; font-weight: 600; }
+        td { color: #ccc; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Index</a>
+        <h1>🔄 Ring Buffer & Hot/Cold Path</h1>
+        <p>Decoupling latency-critical operations from background processing.</p>
+
+        <div class="section">
+            <h2>Hot Path vs Cold Path</h2>
+            <p>The fundamental architecture split for low-latency trading systems:</p>
+            
+            <div class="hot-card">
+                <h4>🔥 Hot Path — Speed Critical</h4>
+                <p>Market data in → Strategy decision → Quote/Order out. This is the latency-sensitive core. Every microsecond matters.</p>
+            </div>
+            
+            <div class="cold-card">
+                <h4>❄️ Cold Path — Reliability Critical</h4>
+                <p>Persistence, analytics, telemetry, compliance logging. Can be slower. Goal is not to drop data, not to be fast.</p>
+            </div>
+
+            <h3>What Belongs Where</h3>
+            <table>
+                <tr>
+                    <th>Hot Path</th>
+                    <th>Cold Path</th>
+                </tr>
+                <tr>
+                    <td>WebSocket market data handler</td>
+                    <td>Database persistence</td>
+                </tr>
+                <tr>
+                    <td>Order book updates</td>
+                    <td>Analytics aggregation</td>
+                </tr>
+                <tr>
+                    <td>Strategy calculations</td>
+                    <td>Compliance logging</td>
+                </tr>
+                <tr>
+                    <td>Order execution</td>
+                    <td>Telemetry/metrics</td>
+                </tr>
+                <tr>
+                    <td>Position updates (in-memory)</td>
+                    <td>Email/Slack alerts</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Enforcing Separation</h2>
+            <p>The rules for keeping hot path fast:</p>
+            
+            <ul>
+                <li><strong>Zero allocations</strong> — Pre-allocated buffers, object pools. No GC pauses.</li>
+                <li><strong>No I/O</strong> — No disk, no logging, no network calls except exchange API.</li>
+                <li><strong>No locks</strong> — Lock-free data structures for handoff to cold path.</li>
+                <li><strong>Async handoff</strong> — Hot path pushes to queue and immediately continues.</li>
+            </ul>
+
+            <div class="warning">
+                <strong>⚠️ What breaks if you mix them:</strong> Cold logic in hot path causes latency spikes and jitter. 
+                Your p99 latency blows up even if median looks fine. Inconsistency kills you in fast markets.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Ring Buffer (Circular Buffer)</h2>
+            <p>The mechanism for lock-free handoff between hot and cold paths.</p>
+
+            <div class="diagram">
+<pre>
+┌─────────────────────────────────────────────────────────┐
+│                    RING BUFFER                          │
+├─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────────┤
+│  0  │  1  │  2  │  3  │  4  │  5  │  6  │  7  │   ...   │
+├─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────┴─────────┤
+│           ▲                       ▲                     │
+│          TAIL                   HEAD                    │
+│       (read ptr)             (write ptr)                │
+│                                                         │
+│   Cold path reads here    Hot path writes here          │
+└─────────────────────────────────────────────────────────┘
+
+HOT PATH THREAD                    COLD PATH THREAD(S)
+      │                                   │
+      │ write(data)                       │ read()
+      ▼                                   ▼
+   buffer[head]                       buffer[tail]
+   head = (head+1) % size             tail = (tail+1) % size
+      │                                   │
+      └── atomic CAS ──────────────── atomic CAS ──┘
+             (no locks needed)
+</pre>
+            </div>
+
+            <h3>Key Properties</h3>
+            <ul>
+                <li><strong>Fixed size</strong> — Pre-allocated at startup. No runtime allocation.</li>
+                <li><strong>Wrap around</strong> — When you hit the end, go back to start.</li>
+                <li><strong>Single producer, multiple consumers</strong> — Hot path writes, cold path thread(s) read.</li>
+                <li><strong>Lock-free</strong> — Uses atomic compare-and-swap (CAS) on pointers.</li>
+            </ul>
+
+            <div class="code-block"><code><span class="comment">// Simplified ring buffer concept</span>
+<span class="keyword">class</span> RingBuffer&lt;T&gt; {
+    <span class="keyword">private</span> T[] buffer;
+    <span class="keyword">private</span> AtomicLong head = <span class="number">0</span>;  <span class="comment">// write position</span>
+    <span class="keyword">private</span> AtomicLong tail = <span class="number">0</span>;  <span class="comment">// read position</span>
+    
+    <span class="comment">// Hot path calls this - never blocks</span>
+    <span class="keyword">void</span> publish(T event) {
+        <span class="keyword">long</span> slot = head.getAndIncrement() % size;
+        buffer[slot] = event;
+    }
+    
+    <span class="comment">// Cold path calls this</span>
+    T consume() {
+        <span class="keyword">long</span> slot = tail.getAndIncrement() % size;
+        <span class="keyword">return</span> buffer[slot];
+    }
+}</code></div>
+        </div>
+
+        <div class="section">
+            <h2>LMAX Disruptor</h2>
+            <p>The canonical high-performance ring buffer implementation. Key innovations:</p>
+            
+            <ul>
+                <li><strong>Cache-line padding</strong> — Prevents false sharing between cores.</li>
+                <li><strong>Sequence barriers</strong> — Coordinate multiple consumers without locks.</li>
+                <li><strong>Batch processing</strong> — Consumers can process multiple events per wake.</li>
+                <li><strong>Wait strategies</strong> — Configurable: busy spin, yield, block.</li>
+            </ul>
+
+            <p>Performance: Can handle 6+ million messages/second per thread with sub-microsecond latency.</p>
+
+            <div class="code-block"><code><span class="comment">// LMAX Disruptor usage pattern</span>
+Disruptor&lt;TradeEvent&gt; disruptor = <span class="keyword">new</span> Disruptor&lt;&gt;(
+    TradeEvent::new,
+    bufferSize,            <span class="comment">// must be power of 2</span>
+    executor,
+    ProducerType.SINGLE,   <span class="comment">// hot path is single producer</span>
+    <span class="keyword">new</span> BusySpinWaitStrategy()  <span class="comment">// lowest latency</span>
+);
+
+<span class="comment">// Register cold path consumers</span>
+disruptor.handleEventsWith(persistenceHandler, analyticsHandler);
+
+<span class="comment">// Hot path publishes</span>
+ringBuffer.publishEvent((event, seq) -> {
+    event.setPrice(price);
+    event.setQuantity(qty);
+});</code></div>
+        </div>
+
+        <div class="section">
+            <h2>Sizing & Overflow</h2>
+            <p>Critical concern: what if cold path can't keep up?</p>
+
+            <h3>Sizing Guidelines</h3>
+            <ul>
+                <li>Buffer size = peak messages/second × max acceptable lag</li>
+                <li>Add 2-3x margin for bursts</li>
+                <li>Monitor: gap between head and tail</li>
+                <li>Alert when buffer is >70% full</li>
+            </ul>
+
+            <h3>Overflow Policies</h3>
+            <table>
+                <tr>
+                    <th>Policy</th>
+                    <th>Behavior</th>
+                    <th>Use When</th>
+                </tr>
+                <tr>
+                    <td><span class="tag red">Block</span></td>
+                    <td>Hot path waits for space</td>
+                    <td>Never in trading — kills latency</td>
+                </tr>
+                <tr>
+                    <td><span class="tag yellow">Drop oldest</span></td>
+                    <td>Overwrite unread data</td>
+                    <td>Metrics, non-critical telemetry</td>
+                </tr>
+                <tr>
+                    <td><span class="tag green">Drop newest</span></td>
+                    <td>Reject new writes</td>
+                    <td>When latest data is less important</td>
+                </tr>
+                <tr>
+                    <td><span class="tag purple">Alert + continue</span></td>
+                    <td>Log overflow, don't block</td>
+                    <td>Most trading scenarios</td>
+                </tr>
+            </table>
+
+            <div class="warning">
+                <strong>Key insight:</strong> For trade events (fills, orders), you typically can't drop data. 
+                Use Kafka downstream for durability. Ring buffer is for fast in-process handoff; 
+                Kafka provides persistence and replay.
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Architecture Options</h2>
+            
+            <h3>Same Process (Lowest Latency)</h3>
+            <div class="diagram">
+<pre>
+┌─────────────────────────────────────────────────────┐
+│                   SINGLE PROCESS                     │
+│                                                      │
+│  ┌──────────┐    Ring Buffer    ┌──────────────┐   │
+│  │ Hot Path │ ───────────────── │ Cold Path    │   │
+│  │ Thread   │                   │ Thread(s)    │   │
+│  └──────────┘                   └──────────────┘   │
+│       │                               │            │
+│       ▼                               ▼            │
+│   Exchange                     ┌──────────────┐   │
+│                                │ Kafka/Redis  │   │
+│                                └──────────────┘   │
+└─────────────────────────────────────────────────────┘
+</pre>
+            </div>
+
+            <h3>Separate Services (More Flexible)</h3>
+            <div class="diagram">
+<pre>
+┌──────────────┐         ┌──────────────────────────┐
+│  Hot Path    │         │      Cold Path Services  │
+│  Service     │         │                          │
+│              │  Kafka  │  ┌─────────┐ ┌────────┐ │
+│  Strategy ───┼────────────│ Persist │ │ Alerts │ │
+│  Execution   │         │  └─────────┘ └────────┘ │
+│              │         │  ┌─────────┐ ┌────────┐ │
+│              │         │  │Analytics│ │Complnce│ │
+└──────────────┘         │  └─────────┘ └────────┘ │
+                         └──────────────────────────┘
+
+Hot path: fire-and-forget to Kafka (async, no ack wait)
+Cold services: consume at their own pace
+</pre>
+            </div>
+
+            <p><strong>For crypto MM:</strong> Kafka with async fire-and-forget is usually sufficient. 
+            You'd only reach for in-process ring buffers if you're competing at single-digit microsecond latency.</p>
+        </div>
+
+        <div class="section">
+            <h2>Quick Reference</h2>
+            <div class="code-block"><code><span class="comment">// When asked about hot/cold path separation:</span>
+
+<span class="string">"Hot path is the latency-critical flow: market data in, 
+strategy decision, quote out. We enforce separation with:
+- Zero allocations (pre-allocated buffers)
+- No I/O or logging in hot path  
+- Lock-free handoff to cold path via ring buffer
+
+Cold path handles persistence, analytics, telemetry on 
+separate threads. They consume from the ring buffer 
+independently.
+
+For crypto, Kafka with async publish works well. For 
+HFT, you'd use in-memory ring buffers like LMAX Disruptor 
+for sub-microsecond handoff."</span></code></div>
+        </div>
+
+        <div class="nav-links">
+            <a href="mm-circuit-breakers.html">← Circuit Breakers</a>
+            <a href="mm-deployment-architecture.html">Deployment Architecture →</a>
+        </div>
+    </div>
+</body>
+</html>

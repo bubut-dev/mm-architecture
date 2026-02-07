@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEX Market Maker Architecture</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 40px;
+            color: #fff;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+            color: #00d9ff;
+        }
+        .subtitle {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #888;
+            font-size: 14px;
+        }
+        .diagram {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .layer {
+            margin-bottom: 30px;
+            position: relative;
+        }
+        .layer-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #666;
+            margin-bottom: 15px;
+            padding-left: 10px;
+            border-left: 3px solid #00d9ff;
+        }
+        .components {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .component {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            min-width: 200px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .component:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: rgba(0,217,255,0.3);
+            transform: translateY(-2px);
+        }
+        .component-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .component-title .icon {
+            font-size: 20px;
+        }
+        .component-desc {
+            font-size: 12px;
+            color: #aaa;
+            line-height: 1.5;
+        }
+        .component-items {
+            margin-top: 10px;
+            font-size: 11px;
+        }
+        .component-items li {
+            color: #888;
+            margin: 4px 0;
+            padding-left: 12px;
+            position: relative;
+        }
+        .component-items li::before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #00d9ff;
+        }
+        
+        /* Component type colors */
+        .hot-path { border-left: 3px solid #ff6b6b; }
+        .state { border-left: 3px solid #4ecdc4; }
+        .cold-path { border-left: 3px solid #a29bfe; }
+        .external { border-left: 3px solid #ffeaa7; }
+        
+        /* Flow arrows */
+        .flow-section {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 0;
+        }
+        .arrow-down {
+            width: 2px;
+            height: 40px;
+            background: linear-gradient(to bottom, #00d9ff, transparent);
+            position: relative;
+            margin: 0 auto;
+        }
+        .arrow-down::after {
+            content: "▼";
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #00d9ff;
+            font-size: 12px;
+        }
+        
+        /* Big wrapper for trading engine */
+        .trading-engine-wrapper {
+            background: rgba(255,107,107,0.05);
+            border: 2px dashed rgba(255,107,107,0.3);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        .wrapper-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #ff6b6b;
+        }
+        .wrapper-subtitle {
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+            margin-top: -15px;
+            margin-bottom: 20px;
+        }
+        
+        /* Flow indicators */
+        .flow-label {
+            background: rgba(0,217,255,0.1);
+            color: #00d9ff;
+            font-size: 10px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        .flow-label.sync { background: rgba(255,107,107,0.2); color: #ff6b6b; }
+        .flow-label.async { background: rgba(162,155,254,0.2); color: #a29bfe; }
+        
+        /* Legend */
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #888;
+        }
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 4px;
+        }
+        .legend-color.hot { background: #ff6b6b; }
+        .legend-color.state { background: #4ecdc4; }
+        .legend-color.cold { background: #a29bfe; }
+        .legend-color.ext { background: #ffeaa7; }
+        
+        /* Data flow summary */
+        .data-flow {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        .data-flow h3 {
+            font-size: 14px;
+            margin-bottom: 15px;
+            color: #00d9ff;
+        }
+        .flow-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        .flow-row .step {
+            background: rgba(255,255,255,0.1);
+            padding: 6px 12px;
+            border-radius: 6px;
+            white-space: nowrap;
+        }
+        .flow-row .arrow {
+            color: #00d9ff;
+        }
+        .flow-row .note {
+            color: #888;
+            font-style: italic;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .components {
+                flex-direction: column;
+            }
+            .component {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>🏦 DEX Market Maker Architecture</h1>
+    <p class="subtitle">Low-latency design with durable state recovery</p>
+    
+    <div class="diagram">
+        <!-- External Layer -->
+        <div class="layer">
+            <div class="layer-title">External / Blockchain</div>
+            <div class="components">
+                <div class="component external">
+                    <div class="component-title">
+                        <span class="icon">⛓️</span> Blockchain
+                    </div>
+                    <div class="component-desc">On-chain source of truth</div>
+                    <ul class="component-items">
+                        <li>Wallet balances (verifiable)</li>
+                        <li>Pool prices / reserves</li>
+                        <li>Transaction confirmations</li>
+                        <li>Block updates</li>
+                    </ul>
+                </div>
+                <div class="component external">
+                    <div class="component-title">
+                        <span class="icon">📡</span> Data Feed
+                    </div>
+                    <div class="component-desc">Solana: Geyser / Ethereum: WS</div>
+                    <ul class="component-items">
+                        <li>Account changes (real-time)</li>
+                        <li>Program logs</li>
+                        <li>Slot notifications</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Trading Engine Wrapper -->
+        <div class="trading-engine-wrapper">
+            <div class="wrapper-title">⚡ Trading Engine (Per-DEX Process)</div>
+            <div class="wrapper-subtitle">Hot path — minimize latency here</div>
+            
+            <div class="components">
+                <div class="component hot-path">
+                    <div class="component-title">
+                        <span class="icon">👂</span> Listener
+                    </div>
+                    <div class="component-desc">Consumes blockchain data feed</div>
+                    <ul class="component-items">
+                        <li>Pool price updates</li>
+                        <li>Wallet balance changes</li>
+                        <li>Our tx confirmations</li>
+                    </ul>
+                    <div class="flow-label sync">sync → Strategy</div>
+                </div>
+                
+                <div class="component hot-path">
+                    <div class="component-title">
+                        <span class="icon">🧠</span> Strategy Engine
+                    </div>
+                    <div class="component-desc">Decision making (in-memory state)</div>
+                    <ul class="component-items">
+                        <li>Local inventory (from fills)</li>
+                        <li>Cost basis (from Kafka cache)</li>
+                        <li>Risk limits (from Redis)</li>
+                        <li>Price signals → trade decision</li>
+                    </ul>
+                    <div class="flow-label sync">sync → Executor</div>
+                </div>
+                
+                <div class="component hot-path">
+                    <div class="component-title">
+                        <span class="icon">🚀</span> Executor
+                    </div>
+                    <div class="component-desc">Transaction submission</div>
+                    <ul class="component-items">
+                        <li>Build transaction</li>
+                        <li>Sign & submit</li>
+                        <li>MEV protection (if ETH)</li>
+                        <li>Retry logic</li>
+                    </ul>
+                    <div class="flow-label async">async → Kafka</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- State Layer -->
+        <div class="layer">
+            <div class="layer-title">State Management</div>
+            <div class="components">
+                <div class="component state">
+                    <div class="component-title">
+                        <span class="icon">⚡</span> Redis
+                    </div>
+                    <div class="component-desc">Fast cache (NOT source of truth)</div>
+                    <ul class="component-items">
+                        <li>Aggregate inventory</li>
+                        <li>Risk limits</li>
+                        <li>Cross-engine coordination</li>
+                    </ul>
+                    <div class="flow-label">Rebuildable from Kafka</div>
+                </div>
+                
+                <div class="component state" style="border-left-color: #ff6b6b;">
+                    <div class="component-title">
+                        <span class="icon">📜</span> Kafka
+                    </div>
+                    <div class="component-desc"><strong>Source of truth</strong> for internal state</div>
+                    <ul class="component-items">
+                        <li>All fills (with price!)</li>
+                        <li>Cost basis per asset</li>
+                        <li>Order history</li>
+                        <li>PnL events</li>
+                    </ul>
+                    <div class="flow-label sync">Durable, replayable</div>
+                </div>
+                
+                <div class="component state">
+                    <div class="component-title">
+                        <span class="icon">🔄</span> Reconciler
+                    </div>
+                    <div class="component-desc">Periodic verification</div>
+                    <ul class="component-items">
+                        <li>Query on-chain balance</li>
+                        <li>Compare to Kafka state</li>
+                        <li>Alert on mismatch</li>
+                        <li>Correct Redis cache</li>
+                    </ul>
+                    <div class="flow-label">Every 1-5 min</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Cold Path Layer -->
+        <div class="layer">
+            <div class="layer-title">Cold Path (Analytics & Compliance)</div>
+            <div class="components">
+                <div class="component cold-path">
+                    <div class="component-title">
+                        <span class="icon">📊</span> Analytics Service
+                    </div>
+                    <div class="component-desc">Consumes Kafka events</div>
+                    <ul class="component-items">
+                        <li>PnL calculations</li>
+                        <li>Performance metrics</li>
+                        <li>Strategy analysis</li>
+                    </ul>
+                </div>
+                
+                <div class="component cold-path">
+                    <div class="component-title">
+                        <span class="icon">🗄️</span> Postgres
+                    </div>
+                    <div class="component-desc">Queryable history</div>
+                    <ul class="component-items">
+                        <li>Trade history</li>
+                        <li>Historical PnL</li>
+                        <li>Reporting queries</li>
+                    </ul>
+                </div>
+                
+                <div class="component cold-path">
+                    <div class="component-title">
+                        <span class="icon">📋</span> Compliance
+                    </div>
+                    <div class="component-desc">Audit trail</div>
+                    <ul class="component-items">
+                        <li>All orders logged</li>
+                        <li>Decision rationale</li>
+                        <li>Regulatory reports</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Data Flow Summary -->
+        <div class="data-flow">
+            <h3>📍 Data Flow: "Where does inventory come from?"</h3>
+            
+            <div class="flow-row">
+                <span class="step">1. Trade executes on-chain</span>
+                <span class="arrow">→</span>
+                <span class="step">2. Listener sees confirmation</span>
+                <span class="arrow">→</span>
+                <span class="step">3. Executor logs to Kafka</span>
+                <span class="note">(fill + price = cost basis)</span>
+            </div>
+            
+            <div class="flow-row">
+                <span class="step">4. Kafka event</span>
+                <span class="arrow">→</span>
+                <span class="step">5. Update Redis cache</span>
+                <span class="arrow">→</span>
+                <span class="step">6. Strategy reads for next decision</span>
+            </div>
+            
+            <div class="flow-row">
+                <span class="step">7. Reconciler (periodic)</span>
+                <span class="arrow">→</span>
+                <span class="step">Query blockchain wallet</span>
+                <span class="arrow">→</span>
+                <span class="step">Verify matches Kafka sum</span>
+                <span class="note">(catch bugs/missed events)</span>
+            </div>
+            
+            <h3 style="margin-top: 20px;">🔥 Recovery Scenarios</h3>
+            
+            <div class="flow-row">
+                <span class="step" style="background: rgba(255,107,107,0.2);">Redis crashes</span>
+                <span class="arrow">→</span>
+                <span class="step">Replay Kafka fills</span>
+                <span class="arrow">→</span>
+                <span class="step">Rebuild inventory + cost basis</span>
+            </div>
+            
+            <div class="flow-row">
+                <span class="step" style="background: rgba(255,107,107,0.2);">Kafka + Redis both down</span>
+                <span class="arrow">→</span>
+                <span class="step">Query on-chain wallet</span>
+                <span class="arrow">→</span>
+                <span class="step">Use on-chain as inventory</span>
+                <span class="note">(cost basis lost, use FIFO estimate)</span>
+            </div>
+        </div>
+        
+        <!-- Legend -->
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color hot"></div>
+                <span>Hot Path (latency-critical)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color state"></div>
+                <span>State Management</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color cold"></div>
+                <span>Cold Path (async)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color ext"></div>
+                <span>External</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
