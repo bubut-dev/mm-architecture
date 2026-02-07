@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acheron Trading - Deep Intelligence Report</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #fff;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .back-link { color: #00d9ff; text-decoration: none; font-size: 14px; }
+        h1 { font-size: 32px; color: #00d9ff; margin: 20px 0; text-align: center; }
+        .subtitle { text-align: center; color: #888; margin-bottom: 10px; }
+        .meta { text-align: center; color: #666; font-size: 12px; margin-bottom: 30px; }
+        h2 { font-size: 24px; color: #4ecdc4; margin: 40px 0 20px 0; border-bottom: 2px solid rgba(78,205,196,0.3); padding-bottom: 10px; }
+        h3 { font-size: 18px; color: #ffeaa7; margin: 25px 0 12px 0; }
+        h4 { font-size: 15px; color: #a29bfe; margin: 18px 0 8px 0; }
+        p { color: #ccc; line-height: 1.8; margin-bottom: 15px; }
+        .section { background: rgba(255,255,255,0.03); border-radius: 12px; padding: 30px; margin: 25px 0; border: 1px solid rgba(255,255,255,0.1); }
+        ul, ol { margin: 15px 0 15px 25px; color: #ccc; }
+        li { margin: 10px 0; line-height: 1.7; }
+        .highlight { background: rgba(0,217,255,0.1); border-left: 4px solid #00d9ff; padding: 18px 22px; margin: 18px 0; border-radius: 0 8px 8px 0; }
+        .highlight strong { color: #00d9ff; }
+        .alpha { background: rgba(78,205,196,0.1); border-left: 4px solid #4ecdc4; padding: 18px 22px; margin: 18px 0; border-radius: 0 8px 8px 0; }
+        .alpha strong { color: #4ecdc4; }
+        .warning { background: rgba(255,107,107,0.1); border-left: 4px solid #ff6b6b; padding: 18px 22px; margin: 18px 0; border-radius: 0 8px 8px 0; }
+        .warning strong { color: #ff6b6b; }
+        .insight { background: rgba(162,155,254,0.1); border-left: 4px solid #a29bfe; padding: 18px 22px; margin: 18px 0; border-radius: 0 8px 8px 0; }
+        .insight strong { color: #a29bfe; }
+        table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 14px; }
+        th, td { padding: 14px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        th { color: #4ecdc4; font-weight: 600; background: rgba(0,0,0,0.3); }
+        td { color: #ccc; }
+        .tag { display: inline-block; padding: 4px 12px; border-radius: 15px; font-size: 11px; margin: 3px; font-weight: 500; }
+        .tag.green { background: rgba(78,205,196,0.2); color: #4ecdc4; }
+        .tag.yellow { background: rgba(255,234,167,0.2); color: #ffeaa7; }
+        .tag.red { background: rgba(255,107,107,0.2); color: #ff6b6b; }
+        .tag.blue { background: rgba(0,217,255,0.2); color: #00d9ff; }
+        .tag.purple { background: rgba(162,155,254,0.2); color: #a29bfe; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin: 25px 0; }
+        .stat-card { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 22px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .stat-value { font-size: 26px; font-weight: bold; color: #00d9ff; }
+        .stat-label { font-size: 11px; color: #888; margin-top: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .person-card { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 20px; margin: 15px 0; border-left: 3px solid #4ecdc4; }
+        .person-name { font-size: 16px; font-weight: 600; color: #4ecdc4; margin-bottom: 5px; }
+        .person-role { font-size: 12px; color: #888; margin-bottom: 10px; }
+        .person-bio { font-size: 13px; color: #aaa; line-height: 1.6; }
+        .quote { font-style: italic; color: #aaa; padding: 15px 20px; border-left: 3px solid #a29bfe; margin: 15px 0; background: rgba(162,155,254,0.05); }
+        .toc { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 20px 25px; margin: 20px 0; }
+        .toc-title { font-size: 14px; color: #4ecdc4; margin-bottom: 12px; font-weight: 600; }
+        .toc a { color: #888; text-decoration: none; font-size: 13px; display: block; padding: 5px 0; }
+        .toc a:hover { color: #00d9ff; }
+        .footer { text-align: center; margin-top: 50px; padding-top: 25px; border-top: 1px solid rgba(255,255,255,0.1); color: #666; font-size: 12px; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Index</a>
+        <h1>🔍 Acheron Trading - Deep Intelligence Report</h1>
+        <p class="subtitle">Comprehensive Analysis from Blog, Research Publications & Public Sources</p>
+        <p class="meta">Generated: February 2026 | Sources: 15+ blog articles, company announcements, press releases</p>
+
+        <div class="toc">
+            <div class="toc-title">📋 Table of Contents</div>
+            <a href="#overview">1. Company Overview & Key Stats</a>
+            <a href="#leadership">2. Leadership Team & Culture</a>
+            <a href="#services">3. Service Lines Deep Dive</a>
+            <a href="#exchange-data">4. Exchange Listing Performance Data</a>
+            <a href="#volume-transparency">5. Volume Transparency Research</a>
+            <a href="#dex-analysis">6. DEX & Uniswap V4 Analysis</a>
+            <a href="#market-views">7. Market Views & Macro Analysis</a>
+            <a href="#tokenomics">8. Options & Tokenomics Research</a>
+            <a href="#regulatory">9. Regulatory & MiCA Strategy</a>
+            <a href="#interview-prep">10. Interview Preparation Alpha</a>
+        </div>
+
+        <!-- Section 1: Overview -->
+        <div class="section" id="overview">
+            <h2>1. Company Overview</h2>
+            
+            <div class="stat-grid">
+                <div class="stat-card">
+                    <div class="stat-value">$250M+</div>
+                    <div class="stat-label">Assets Under Management</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">2018</div>
+                    <div class="stat-label">Founded (as LSM)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">MiCA #1</div>
+                    <div class="stat-label">First Dedicated MM Licensed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">Singapore</div>
+                    <div class="stat-label">HQ Location</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">Netherlands</div>
+                    <div class="stat-label">EU License (AFM)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">4</div>
+                    <div class="stat-label">Service Lines</div>
+                </div>
+            </div>
+
+            <h3>Company Timeline</h3>
+            <ul>
+                <li><strong>2018:</strong> Founded as "Liquid Solutions Malta (LSM)" by Wesley Pryor</li>
+                <li><strong>2019:</strong> Wesley meets Laurent Benayoun, begins partnership with HedgeTech</li>
+                <li><strong>Q4 2022:</strong> Acquires HedgeTech LLC, merges technologies</li>
+                <li><strong>2022:</strong> Navigates "great cleansing" of crypto MM landscape (FTX collapse era)</li>
+                <li><strong>2024:</strong> Laurent Benayoun appointed CEO</li>
+                <li><strong>May 2025:</strong> First dedicated MM to secure MiCA CASP license (Netherlands/AFM)</li>
+            </ul>
+
+            <h3>Core Positioning</h3>
+            <div class="highlight">
+                <strong>Their Differentiator:</strong> "Transparency should be paramount when discussing market-making partnerships. We present our findings without interference, allowing issuers, traders, and all stakeholders to draw their own conclusions."
+            </div>
+            
+            <p>They position against the industry norm of "black box agreements" where MMs provide little to no reporting. Their Command Station product offers real-time visibility into liquidity KPIs.</p>
+        </div>
+
+        <!-- Section 2: Leadership -->
+        <div class="section" id="leadership">
+            <h2>2. Leadership Team & Culture</h2>
+
+            <div class="person-card">
+                <div class="person-name">Laurent Benayoun</div>
+                <div class="person-role">CEO (appointed 2024)</div>
+                <div class="person-bio">
+                    <strong>Background:</strong> Born in France to immigrant parents. Trained as a classical violinist (12-year conservatory program). Completed dual degrees + pre-med at US university in 3 years. Co-founded HedgeTech with Tom Qiu. Former algo trader. Mentor at Harvard Blockchain Accelerator, speaker at Princeton.
+                    <br><br>
+                    <strong>Path to crypto:</strong> Discovered Bitcoin in Paris subway journal. Applied math course on Brownian motion led to finance interest. Found crypto had fewer friction points than traditional markets. Initially saw crypto as "stepping stone to TradFi" until reading Ethereum whitepaper changed perspective.
+                    <br><br>
+                    <strong>Key quote:</strong> "When people tell you that you can't do it, you need to see by yourself."
+                </div>
+            </div>
+
+            <div class="person-card">
+                <div class="person-name">Wesley Pryor</div>
+                <div class="person-role">Founder</div>
+                <div class="person-bio">
+                    <strong>Background:</strong> Licensed CPA. Mother was a CPA who uncovered a fraud scheme (sent perpetrator to jail) and later resigned rather than falsify expenses. These values shaped Wesley's approach.
+                    <br><br>
+                    <strong>Path to crypto:</strong> Discovered Bitcoin while TAing to cover master's tuition. Realized blockchain could make his accounting internship work (faxing banks for balance confirmations) redundant. Experienced Indian demonetization in 2016 with 35% BTC premium on Indian exchanges.
+                    <br><br>
+                    <strong>Notable:</strong> Uncovered AriseBank ICO scam, helped send perpetrator to jail. Founded Acheron after being "taken aback" by "shady, unprofessional" MM operators in crypto.
+                </div>
+            </div>
+
+            <div class="person-card">
+                <div class="person-name">Daniel Lo</div>
+                <div class="person-role">CLO (Chief Legal Officer)</div>
+                <div class="person-bio">
+                    Background collaborating with legal departments of world's largest investment banks. Joined to lead regulatory strategy including MiCA licensing.
+                </div>
+            </div>
+
+            <div class="person-card">
+                <div class="person-name">Shi (Tom) Qiu</div>
+                <div class="person-role">Co-founder, HedgeTech</div>
+                <div class="person-bio">
+                    Co-founded HedgeTech with Laurent. Technical focus on trading algorithms and infrastructure.
+                </div>
+            </div>
+
+            <h3>Culture & Values</h3>
+            <div class="quote">
+                "We value an inclusive work environment, true freedom, and the opportunities technology is bringing to humanity... Everyone, from top to bottom, has a winner's mindset. We don't just aim to reach goals, but to exceed them."
+            </div>
+            <ul>
+                <li><strong>Integrity:</strong> Every day they're "faced with the opportunity to make a profit—and choose not to, without a single ounce of hesitation"</li>
+                <li><strong>Transparency:</strong> Core to existence - Command Station provides real-time KPI visibility</li>
+                <li><strong>Low turnover:</strong> Emphasized as evidence of team satisfaction</li>
+                <li><strong>2022 survival:</strong> "Seamlessly navigated the great cleansing of the market making landscape, emerging unscathed"</li>
+            </ul>
+        </div>
+
+        <!-- Section 3: Services -->
+        <div class="section" id="services">
+            <h2>3. Service Lines Deep Dive</h2>
+
+            <div class="two-col">
+                <div>
+                    <h3>PMM - Principal Market Making</h3>
+                    <p><span class="tag blue">Own Capital</span> <span class="tag green">Loan + Call Option</span></p>
+                    <ul>
+                        <li>Acheron provides capital via token loan</li>
+                        <li>Receives call options as compensation</li>
+                        <li>If token price increases, they benefit from options</li>
+                        <li>No monthly fees to the project</li>
+                        <li>Aligned incentives - MM wants token to succeed</li>
+                    </ul>
+                    <div class="insight">
+                        <strong>How it works:</strong> Project loans tokens to Acheron. Acheron + their stablecoins make markets. They get call options at a strike price. If token pumps, they exercise options for profit. If flat/down, options expire but they still earned from spreads.
+                    </div>
+                </div>
+                <div>
+                    <h3>DMM - Designated Market Making</h3>
+                    <p><span class="tag yellow">Client Capital</span> <span class="tag purple">White Glove</span></p>
+                    <ul>
+                        <li>Client provides tokens + cash</li>
+                        <li>Acheron operates the strategy</li>
+                        <li>Monthly fees + profit sharing</li>
+                        <li>More of a managed service</li>
+                        <li>Risk is on client's capital</li>
+                    </ul>
+                </div>
+            </div>
+
+            <h3>Managed Execution</h3>
+            <p>Client-tailored automated agency execution for buying and selling digital assets. For clients who need to execute large orders without market impact.</p>
+
+            <h3>Command Station (Technology)</h3>
+            <p>Their proprietary trading infrastructure and software, available for licensing with consulting.</p>
+            <div class="alpha">
+                <strong>Key Feature:</strong> Real-time portal for viewing liquidity KPIs. This is their transparency differentiator - clients don't need to hire third-party brokers (like Coinwatch or Glassmarkets) to verify MM performance.
+            </div>
+
+            <h3>Their View on MM Economics</h3>
+            <div class="warning">
+                <strong>Critical Point:</strong> "Market makers cannot generate volumes. If a market maker claims it can generate volumes, that is a red flag." They can only place limit orders that make markets more efficient and indirectly support volume by enabling trading.
+            </div>
+        </div>
+
+        <!-- Section 4: Exchange Data -->
+        <div class="section" id="exchange-data">
+            <h2>4. Exchange Listing Performance Data</h2>
+            <p>Acheron publishes extensive quantitative research analyzing 2,000+ listings from January 2023 to June 2025.</p>
+
+            <h3>Exchange Rankings (Jan-June 2025)</h3>
+            <table>
+                <tr>
+                    <th>Exchange</th>
+                    <th>Listings</th>
+                    <th>ATH Multiple</th>
+                    <th>24H Multiple</th>
+                    <th>7D Multiple</th>
+                    <th>Win Rate</th>
+                    <th>Tier</th>
+                </tr>
+                <tr>
+                    <td><strong>Bybit</strong></td>
+                    <td>61</td>
+                    <td>11.72x</td>
+                    <td>5.83x</td>
+                    <td>7.42x</td>
+                    <td>67.2%</td>
+                    <td><span class="tag green">Leader</span></td>
+                </tr>
+                <tr>
+                    <td><strong>OKX</strong></td>
+                    <td>21</td>
+                    <td>6.98x</td>
+                    <td>4.45x</td>
+                    <td>6.43x</td>
+                    <td>42.9%</td>
+                    <td><span class="tag blue">Tier 2</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Binance</strong></td>
+                    <td>24</td>
+                    <td>6.03x</td>
+                    <td>3.97x</td>
+                    <td>3.32x</td>
+                    <td>29.2%</td>
+                    <td><span class="tag yellow">Underwhelms</span></td>
+                </tr>
+                <tr>
+                    <td><strong>KuCoin</strong></td>
+                    <td>108</td>
+                    <td>5.54x</td>
+                    <td>2.66x</td>
+                    <td>4.92x</td>
+                    <td>33.3%</td>
+                    <td><span class="tag blue">Tier 2</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Gate</strong></td>
+                    <td>212</td>
+                    <td>2.77x</td>
+                    <td>1.37x</td>
+                    <td>2.00x</td>
+                    <td>13.7%</td>
+                    <td><span class="tag red">Tier 3</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Kraken</strong></td>
+                    <td>35</td>
+                    <td>1.61x</td>
+                    <td>0.97x</td>
+                    <td>1.00x</td>
+                    <td>5.7%</td>
+                    <td><span class="tag red">Tier 3</span></td>
+                </tr>
+            </table>
+
+            <div class="alpha">
+                <strong>🎯 Key Insight:</strong> "Bybit leads decisively... In contrast, Binance, despite its top-tier reputation, shows only a 29.2% win rate. While its listings achieve solid ATHs, few sustain gains beyond the first 24 hours, suggesting that high visibility doesn't always translate to lasting performance."
+            </div>
+
+            <h3>Binance Alpha Analysis</h3>
+            <table>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                    <th>Interpretation</th>
+                </tr>
+                <tr>
+                    <td>ATH Multiple</td>
+                    <td>2.17x</td>
+                    <td>Some initial upside</td>
+                </tr>
+                <tr>
+                    <td>24H Multiple</td>
+                    <td>1.06x</td>
+                    <td>Barely above listing</td>
+                </tr>
+                <tr>
+                    <td>7D Multiple</td>
+                    <td>0.94x</td>
+                    <td>Below listing price</td>
+                </tr>
+                <tr>
+                    <td>30D Multiple</td>
+                    <td>0.71x</td>
+                    <td>-29% from listing</td>
+                </tr>
+            </table>
+            <p><strong>Conclusion:</strong> Binance Alpha's large-scale airdrops generate hype but introduce massive sell pressure. Day 7 volume spike is partly from "trade-to-earn" Alpha Points, not organic demand.</p>
+
+            <h3>Market Trends They Track</h3>
+            <ul>
+                <li><strong>Listing activity collapse:</strong> June 2025 had only 9 listings - lowest since Jan 2023. Peak was 139 in Jan 2025.</li>
+                <li><strong>BTC decoupling:</strong> Altcoin listing performance no longer tracks BTC rallies. "Investors prefer doubling down on BTC rather than rotating into altcoins during strong BTC momentum."</li>
+                <li><strong>Volume concentrated:</strong> Binance is the only true Tier 1. Tier 2 (OKX, KuCoin, Bybit, Coinbase) do 6-32% of Binance volume.</li>
+            </ul>
+        </div>
+
+        <!-- Section 5: Volume Transparency -->
+        <div class="section" id="volume-transparency">
+            <h2>5. Volume Transparency Research</h2>
+            <p>They publish data on actual fill volumes from their trading, which they can verify since they're counterparty to all trades.</p>
+
+            <h3>Volume Collapse Data (2022-2023)</h3>
+            <ul>
+                <li><strong>87% decline</strong> in average market volume from Jan 2022 to May 2023</li>
+                <li>Sept 2022 was the low point: only <strong>10%</strong> of Jan 2022 volume</li>
+                <li>YoY Jan 2023 vs Jan 2022: <strong>-83%</strong></li>
+            </ul>
+
+            <h3>Exchange Volume Tiers (Their Data)</h3>
+            <table>
+                <tr>
+                    <th>Tier</th>
+                    <th>Exchanges</th>
+                    <th>% of Binance Volume</th>
+                </tr>
+                <tr>
+                    <td><span class="tag green">Tier 1</span></td>
+                    <td>Binance</td>
+                    <td>100%</td>
+                </tr>
+                <tr>
+                    <td><span class="tag blue">Tier 2</span></td>
+                    <td>OKX, KuCoin, Bybit, Coinbase</td>
+                    <td>6-32%</td>
+                </tr>
+                <tr>
+                    <td><span class="tag yellow">Tier 3</span></td>
+                    <td>Gate.io, Ascendex, Bittrex, Huobi, Bitmart</td>
+                    <td>1-11%</td>
+                </tr>
+            </table>
+
+            <div class="warning">
+                <strong>Their View on Fake Volume:</strong> Aggregator volumes are "significantly overstated" due to: exchanges inflating via internal trading desks for rankings, minimum volume requirements on issuers, and wash trading services sold as "market making."
+            </div>
+
+            <h3>How to Spot Real Liquidity</h3>
+            <ul>
+                <li><strong>CO/VOL % (CoinPaprika):</strong> Combined Orders/Volume ratio. Over 100% = highly liquid. Below 5% = concerning.</li>
+                <li><strong>Order book depth:</strong> Check +/- 2% depth, not just volume</li>
+                <li><strong>Spread:</strong> Should be under 1% for liquid markets</li>
+                <li><strong>Their advice:</strong> "Think about exchange reported volume as the cover of a book, but liquidity as the real story."</li>
+            </ul>
+        </div>
+
+        <!-- Section 6: DEX Analysis -->
+        <div class="section" id="dex-analysis">
+            <h2>6. DEX & Uniswap V4 Analysis</h2>
+            <p>They published a detailed technical analysis of Uniswap v4 from a market maker's perspective.</p>
+
+            <h3>Uniswap Version History</h3>
+            <table>
+                <tr>
+                    <th>Version</th>
+                    <th>Date</th>
+                    <th>Key Innovation</th>
+                </tr>
+                <tr>
+                    <td>V1</td>
+                    <td>Nov 2018</td>
+                    <td>First AMM, constant product (x*y=k), ETH-only pairs</td>
+                </tr>
+                <tr>
+                    <td>V2</td>
+                    <td>May 2020</td>
+                    <td>ERC20-ERC20 pairs, more flexible</td>
+                </tr>
+                <tr>
+                    <td>V3</td>
+                    <td>May 2021</td>
+                    <td>Concentrated liquidity, custom price ranges</td>
+                </tr>
+                <tr>
+                    <td>V4</td>
+                    <td>Jan 2025</td>
+                    <td>Hooks, singleton architecture, flash accounting</td>
+                </tr>
+            </table>
+
+            <h3>V4 Key Features They Track</h3>
+            <ul>
+                <li><strong>Hooks:</strong> Customizable logic before/after swaps - enables dynamic fees, TWAMM, limit orders, custom oracles</li>
+                <li><strong>Singleton Architecture:</strong> All pools in one contract - 99% gas reduction for new pool creation</li>
+                <li><strong>ERC-6909:</strong> Internal accounting standard - tokens burned/minted instead of transferred</li>
+                <li><strong>Flash Accounting:</strong> Streamlined token transfers, better capital efficiency</li>
+                <li><strong>Native ETH:</strong> Direct ETH swaps without WETH - 15% gas savings per swap</li>
+                <li><strong>CCA (Continuous Clearing Auctions):</strong> Permissionless auction for fairer price discovery</li>
+            </ul>
+
+            <div class="insight">
+                <strong>Their View:</strong> V4 adoption will be gradual due to hook complexity and migration needs. As of Sept 2025, V4 handles ~$700M daily volume vs $427M still on V3 for Ethereum. They note Hyperliquid and Aerodrome as hybrid DEX leaders.
+            </div>
+
+            <h3>DEX vs CEX Trend</h3>
+            <p>They observe a shift toward DEXs for:</p>
+            <ul>
+                <li><strong>Cost:</strong> CEX listing fees range from hundreds of thousands to millions of dollars</li>
+                <li><strong>Autonomy:</strong> Projects control tokenomics via smart contracts</li>
+                <li><strong>Transparency:</strong> All transactions verifiable on-chain</li>
+                <li><strong>Their prediction:</strong> Hybrid models (CEX liquidity + DEX security) gaining ground</li>
+            </ul>
+        </div>
+
+        <!-- Section 7: Market Views -->
+        <div class="section" id="market-views">
+            <h2>7. Market Views & Macro Analysis</h2>
+            <p>Their weekly updates and thought leadership reveal their market thinking.</p>
+
+            <h3>Alt Season Indicators They Track</h3>
+            <ul>
+                <li><strong>ETH/BTC Ratio:</strong> "One of the most reliable indicators." Rising ratio = capital rotating to alts. Breaking above 250-day MA = regime shift signal.</li>
+                <li><strong>BTC Dominance:</strong> Below 250-day MA signals altcoin rotation. They note "technically ambiguous picture" with recent back-and-forth around the threshold.</li>
+                <li><strong>Altcoin Market Cap:</strong> Almost doubled since April 2025. Broad-based expansion across DeFi, NFT infra, modular blockchains, rollups.</li>
+            </ul>
+
+            <h3>Macro Factors</h3>
+            <ul>
+                <li><strong>Liquidity:</strong> Fed rate cuts expected Sept 2025+ → pro-liquidity regime → historically bullish for alts</li>
+                <li><strong>Regulatory clarity:</strong> ETH ETFs, GENIUS Act, MiCA all positive for institutional participation</li>
+                <li><strong>Current state (Feb 2026):</strong> Fear & Greed at 30 (Fear), Altseason indicator at 16 (deep Bitcoin season), BTC ~$83K</li>
+            </ul>
+
+            <h3>Their Weekly Update Structure</h3>
+            <p>Each week they publish:</p>
+            <ul>
+                <li>Sentiment indicators (Fear & Greed, Altseason)</li>
+                <li>Price performance tables (BTC, ETH, SOL, XRP, COIN50, Gold, SPX)</li>
+                <li>Newly listed projects with performance metrics</li>
+                <li>Smart money flows (top 10 inflows/outflows by chain)</li>
+                <li>Stablecoin flows</li>
+                <li>Macro/crypto news digest</li>
+            </ul>
+        </div>
+
+        <!-- Section 8: Tokenomics -->
+        <div class="section" id="tokenomics">
+            <h2>8. Options & Tokenomics Research</h2>
+            <p>They published sophisticated research on extending Black-Scholes for crypto assets.</p>
+
+            <h3>Key Insight: Tokenomics as Dividend Yield</h3>
+            <ul>
+                <li><strong>Inflation (emissions, staking rewards):</strong> Acts like positive dividend yield → depresses option values</li>
+                <li><strong>Burns (EIP-1559, protocol fees):</strong> Acts like negative dividend yield → increases option values</li>
+                <li><strong>Formula:</strong> q_token = inflation_rate - burn_rate</li>
+            </ul>
+
+            <div class="highlight">
+                <strong>Practical Implication:</strong> "A 90% volatility token with 15% annual inflation behaves very differently from a 90% volatility deflationary ETH derivative." Token supply mechanics must be embedded in option pricing models.
+            </div>
+
+            <h3>Tokenomics as Jumps</h3>
+            <p>Large unlocks and halvings should be modeled as scheduled jumps, not continuous drift. This explains why IV spikes into known events.</p>
+
+            <h3>Stablecoin Research</h3>
+            <p>Their thesis: Yield-backed stablecoin issuance functions like credit expansion → inflationary pressure on assets.</p>
+            <ul>
+                <li>Issuer can retain T-bill yield AND buy BTC with newly-minted stablecoins</li>
+                <li>Creates purchasing power without selling the backing asset</li>
+                <li>Similar to shadow banking / synthetic leverage</li>
+                <li>GENIUS Act formalized stablecoins but doesn't limit usage scope → potential for broad monetary impact</li>
+            </ul>
+        </div>
+
+        <!-- Section 9: Regulatory -->
+        <div class="section" id="regulatory">
+            <h2>9. Regulatory & MiCA Strategy</h2>
+
+            <h3>MiCA License Details</h3>
+            <ul>
+                <li><strong>Date:</strong> May 27, 2025</li>
+                <li><strong>Regulator:</strong> Dutch Authority for Financial Markets (AFM)</li>
+                <li><strong>Type:</strong> CASP (Crypto-Asset Service Provider) license</li>
+                <li><strong>Significance:</strong> First dedicated crypto market maker to secure MiCA license</li>
+                <li><strong>Scope:</strong> European passport enables services across entire EU</li>
+            </ul>
+
+            <h3>Their Regulatory Strategy</h3>
+            <div class="quote">
+                "Global assets necessitate global liquidity. For market makers to effectively meet the needs of global clients in bringing their assets to market, it's critical that we scale responsibly across key markets." - Wesley Pryor
+            </div>
+            <ul>
+                <li>Pursuing licenses in additional jurisdictions</li>
+                <li>View MiCA as positioning Europe as industry first-mover</li>
+                <li>See regulatory clarity as enabling institutional participation</li>
+            </ul>
+
+            <h3>Europe Market Stats They Cite</h3>
+            <ul>
+                <li>European crypto market valued at $6.9B, projected $27.6B by 2033 (CAGR 14.94%)</li>
+                <li>55% of global trading volume on European-licensed exchanges (ESMA data)</li>
+                <li>11,597 crypto entities in Europe by end of 2023 - global leader in crypto employment</li>
+                <li>Revenue forecast: €26.7B by 2028 (CAGR 8.6%)</li>
+            </ul>
+        </div>
+
+        <!-- Section 10: Interview Prep -->
+        <div class="section" id="interview-prep">
+            <h2>10. Interview Preparation Alpha</h2>
+
+            <div class="alpha">
+                <strong>🎯 What Makes Acheron Different (Key Talking Points):</strong>
+                <ol>
+                    <li><strong>Data-driven transparency:</strong> They publish extensive research that anyone can verify</li>
+                    <li><strong>Command Station:</strong> Real-time KPI visibility vs industry "black box"</li>
+                    <li><strong>Regulatory first-mover:</strong> First dedicated MM with MiCA license</li>
+                    <li><strong>Integrity culture:</strong> Founded after seeing "shady operators" - explicitly anti-wash-trading</li>
+                    <li><strong>Full stack:</strong> PMM + DMM + Execution + Tech licensing</li>
+                    <li><strong>2022 survivor:</strong> Navigated FTX collapse era unscathed</li>
+                </ol>
+            </div>
+
+            <h3>Questions to Ask Them</h3>
+            <ul>
+                <li>"Given your research showing Bybit significantly outperforms Binance on listing outcomes, how do you advise clients on exchange selection?"</li>
+                <li>"How does Command Station integrate with the trading infrastructure? Is it the same stack you're hiring for?"</li>
+                <li>"Your volume transparency research shows 87% decline since 2022 - how has that shaped your business strategy?"</li>
+                <li>"With V4's hooks, are you building custom MM strategies on Uniswap? How do you see DEX vs CEX splitting going forward?"</li>
+                <li>"How are you operationally leveraging the MiCA license? What jurisdictions are next?"</li>
+                <li>"The Black-Scholes extension paper mentions tokenomics pricing - is that used in PMM call option valuation?"</li>
+            </ul>
+
+            <h3>Show You've Done Homework</h3>
+            <ul>
+                <li>Reference their specific data: "Your June 2025 report showed only 9 listings - historic low"</li>
+                <li>Mention founder stories: Wesley's CPA/fraud background, Laurent's violin/immigrant story</li>
+                <li>Know PMM vs DMM mechanics deeply</li>
+                <li>Understand their transparency positioning vs competitors</li>
+                <li>Reference HedgeTech acquisition and tech integration</li>
+            </ul>
+
+            <h3>Technical Topics They Care About</h3>
+            <ul>
+                <li>Low-latency infrastructure (HedgeTech brought trading algos)</li>
+                <li>Multi-exchange connectivity (CEX + DEX)</li>
+                <li>Real-time analytics dashboards (Command Station)</li>
+                <li>Kafka for event logging (mentioned in their architecture discussions)</li>
+                <li>Risk management and circuit breakers</li>
+                <li>Regulatory compliance infrastructure</li>
+            </ul>
+
+            <div class="warning">
+                <strong>⚠️ Red Flags to Avoid:</strong>
+                <ul>
+                    <li>Don't mention "generating volume" - they explicitly call this a red flag</li>
+                    <li>Don't confuse PMM and DMM capital sources</li>
+                    <li>Don't assume Binance is always best - their data shows otherwise</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Sources: acherontrading.com/blog (15+ articles), LinkedIn, Crunchbase, press releases</p>
+            <p>Report generated: February 2026 | For interview preparation purposes</p>
+        </div>
+    </div>
+</body>
+</html>
