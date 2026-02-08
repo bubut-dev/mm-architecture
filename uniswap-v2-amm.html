@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uniswap V2 AMM - Constant Product Math</title>
+    <style>
+        :root {
+            --primary: #ff007a;
+            --bg: #0d0d0d;
+            --surface: #1a1a1a;
+            --text: #ffffff;
+            --muted: #888;
+            --code-bg: #2d2d2d;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { color: var(--primary); margin-bottom: 1rem; }
+        h2 { color: var(--primary); margin: 2rem 0 1rem; border-bottom: 1px solid #333; padding-bottom: 0.5rem; }
+        h3 { color: #ccc; margin: 1.5rem 0 0.5rem; }
+        p { margin: 0.5rem 0; }
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        pre code { background: none; padding: 0; }
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid var(--primary);
+        }
+        .formula {
+            background: #1e3a5f;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 1.1em;
+            margin: 0.5rem 0;
+            text-align: center;
+        }
+        .mnemonic {
+            background: #2d4a2d;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            font-style: italic;
+        }
+        .warning {
+            background: #4a2d2d;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            border-left: 4px solid #ff6b6b;
+        }
+        ul { margin-left: 1.5rem; margin-top: 0.5rem; }
+        li { margin: 0.3rem 0; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #333; }
+        th { background: var(--surface); color: var(--primary); }
+        .example {
+            background: #2d3a4a;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+        }
+        a { color: var(--primary); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .nav { margin-bottom: 2rem; }
+        .nav a { margin-right: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="index.html">← Back to Index</a>
+            <a href="uniswap-v3-clmm.html">V3 CLMM →</a>
+            <a href="uniswap-v4-deep-dive.html">V4 Deep Dive →</a>
+        </div>
+        
+        <h1>🦄 Uniswap V2 - Constant Product AMM</h1>
+        <p><em>The foundation of DeFi market making</em></p>
+
+        <h2>📐 Core Concept: Constant Product</h2>
+        
+        <div class="card">
+            <h3>The Invariant</h3>
+            <div class="formula">x × y = k</div>
+            <p>Where:</p>
+            <ul>
+                <li><code>x</code> = reserve of token X (e.g., ETH)</li>
+                <li><code>y</code> = reserve of token Y (e.g., USDC)</li>
+                <li><code>k</code> = constant (only changes when LPs add/remove)</li>
+            </ul>
+            
+            <div class="mnemonic">
+                <strong>Mnemonic:</strong> "The product stays the same" - if you take X, you must add enough Y to keep x×y = k
+            </div>
+        </div>
+
+        <h2>💱 Swap Formula (No Fees)</h2>
+        
+        <div class="card">
+            <h3>How Much Y Do You Get for Δx?</h3>
+            <p>Starting: x × y = k</p>
+            <p>After swap: (x + Δx) × (y - Δy) = k</p>
+            
+            <div class="formula">Δy = (y × Δx) / (x + Δx)</div>
+            
+            <div class="mnemonic">
+                <strong>Mnemonic:</strong> "Opposite times input, over yours plus input"<br>
+                Δy = (opposite_reserve × input) / (your_reserve + input)
+            </div>
+            
+            <div class="example">
+                <strong>Example:</strong> Pool has 10 ETH, 20,000 USDC (k = 200,000)<br>
+                Swap in 1 ETH:<br>
+                Δy = (20,000 × 1) / (10 + 1) = 20,000 / 11 = 1,818.18 USDC
+            </div>
+        </div>
+
+        <h2>💰 Swap Formula (With 0.3% Fee)</h2>
+        
+        <div class="card">
+            <h3>Fee-Adjusted Formula</h3>
+            <p>Uniswap V2 charges 0.3% on the input amount:</p>
+            
+            <div class="formula">Δy = (y × Δx × 997) / (x × 1000 + Δx × 997)</div>
+            
+            <p>The 997/1000 factor removes 0.3% from the input.</p>
+            
+            <div class="mnemonic">
+                <strong>Mnemonic:</strong> "997 on top and bottom right, 1000 on bottom left"
+            </div>
+            
+            <div class="example">
+                <strong>Same example with fee:</strong><br>
+                Δy = (20,000 × 1 × 997) / (10 × 1000 + 1 × 997)<br>
+                Δy = 19,940,000 / 10,997 = 1,813.22 USDC<br>
+                <em>Lost ~5 USDC to fee (0.3% of value)</em>
+            </div>
+        </div>
+
+        <h2>📊 Price & Slippage</h2>
+        
+        <div class="card">
+            <h3>Spot Price</h3>
+            <div class="formula">P = y / x</div>
+            <p>Price of X in terms of Y = how many Y per one X</p>
+            
+            <h3>Price Impact</h3>
+            <p>The more you trade, the worse your price:</p>
+            <ul>
+                <li>Small trade → price ≈ spot price</li>
+                <li>Large trade → significant slippage</li>
+            </ul>
+            
+            <div class="formula">Effective Price = Δy / Δx</div>
+            
+            <div class="formula">Price Impact = (Spot Price - Effective Price) / Spot Price</div>
+            
+            <div class="example">
+                <strong>Example:</strong> Spot = 2,000 USDC/ETH<br>
+                Trade 1 ETH → Get 1,818 USDC → Effective = 1,818/1 = 1,818<br>
+                Impact = (2000 - 1818) / 2000 = 9.1% slippage
+            </div>
+        </div>
+
+        <h2>📉 Impermanent Loss</h2>
+        
+        <div class="card">
+            <h3>What Is It?</h3>
+            <p>The difference between HODL and LP. When prices change, rebalancing costs you.</p>
+            
+            <h3>Formula (Single Price Ratio)</h3>
+            <div class="formula">IL = 2√r / (1 + r) - 1</div>
+            <p>Where <code>r</code> = new_price / old_price</p>
+            
+            <div class="mnemonic">
+                <strong>Mnemonic:</strong> "2 root r, over 1 plus r, minus 1"
+            </div>
+            
+            <h3>IL Table</h3>
+            <table>
+                <tr><th>Price Change</th><th>r</th><th>IL</th></tr>
+                <tr><td>+25%</td><td>1.25</td><td>-0.6%</td></tr>
+                <tr><td>+50%</td><td>1.50</td><td>-2.0%</td></tr>
+                <tr><td>+100% (2x)</td><td>2.00</td><td>-5.7%</td></tr>
+                <tr><td>+200% (3x)</td><td>3.00</td><td>-13.4%</td></tr>
+                <tr><td>+300% (4x)</td><td>4.00</td><td>-20.0%</td></tr>
+                <tr><td>+400% (5x)</td><td>5.00</td><td>-25.5%</td></tr>
+            </table>
+            
+            <div class="warning">
+                <strong>Key Insight:</strong> IL is SYMMETRIC! Price going to 2x OR 0.5x gives the same IL (-5.7%)
+            </div>
+        </div>
+
+        <h2>💼 LP Position Value</h2>
+        
+        <div class="card">
+            <h3>How Much Is Your LP Worth?</h3>
+            <p>If you own share <code>s</code> of the pool:</p>
+            
+            <div class="formula">LP Value = s × (x × Pₓ + y × Pᵧ)</div>
+            
+            <p>Or in terms of one token:</p>
+            <div class="formula">LP Value = s × 2 × √(k × P)</div>
+            
+            <h3>Your Token Amounts</h3>
+            <div class="formula">Your X = s × x</div>
+            <div class="formula">Your Y = s × y</div>
+        </div>
+
+        <h2>🎯 For Market Makers</h2>
+        
+        <div class="card">
+            <h3>Key Takeaways</h3>
+            <ul>
+                <li><strong>Full range:</strong> Liquidity spread across entire price curve (0 to ∞)</li>
+                <li><strong>Capital inefficient:</strong> Most liquidity unused at any moment</li>
+                <li><strong>Passive rebalancing:</strong> AMM auto-sells winners, buys losers</li>
+                <li><strong>IL risk:</strong> Must earn fees > IL to profit</li>
+            </ul>
+            
+            <h3>When V2 Works</h3>
+            <ul>
+                <li>Stable pairs (low IL)</li>
+                <li>High volume pairs (fees > IL)</li>
+                <li>Set-and-forget liquidity (no active management)</li>
+            </ul>
+            
+            <h3>Hedging IL</h3>
+            <p>To stay delta neutral:</p>
+            <ul>
+                <li>Short the volatile asset proportionally</li>
+                <li>Rebalance shorts as LP rebalances</li>
+                <li>LP position is like selling options (short gamma)</li>
+            </ul>
+        </div>
+
+        <h2>🔢 Quick Reference</h2>
+        
+        <div class="card">
+            <table>
+                <tr><th>What</th><th>Formula</th></tr>
+                <tr><td>Invariant</td><td><code>x × y = k</code></td></tr>
+                <tr><td>Swap (no fee)</td><td><code>Δy = (y × Δx) / (x + Δx)</code></td></tr>
+                <tr><td>Swap (0.3% fee)</td><td><code>Δy = (y × Δx × 997) / (x × 1000 + Δx × 997)</code></td></tr>
+                <tr><td>Spot Price</td><td><code>P = y / x</code></td></tr>
+                <tr><td>IL</td><td><code>2√r / (1 + r) - 1</code></td></tr>
+            </table>
+        </div>
+
+        <hr style="margin: 2rem 0; border-color: #333;">
+        <p style="color: var(--muted); text-align: center;">
+            <a href="uniswap-v3-clmm.html">Next: Uniswap V3 Concentrated Liquidity →</a>
+        </p>
+    </div>
+</body>
+</html>

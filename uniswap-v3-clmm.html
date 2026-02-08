@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uniswap V3 CLMM - Concentrated Liquidity Math</title>
+    <style>
+        :root {
+            --primary: #ff007a;
+            --bg: #0d0d0d;
+            --surface: #1a1a1a;
+            --text: #ffffff;
+            --muted: #888;
+            --code-bg: #2d2d2d;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { color: var(--primary); margin-bottom: 1rem; }
+        h2 { color: var(--primary); margin: 2rem 0 1rem; border-bottom: 1px solid #333; padding-bottom: 0.5rem; }
+        h3 { color: #ccc; margin: 1.5rem 0 0.5rem; }
+        p { margin: 0.5rem 0; }
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        pre code { background: none; padding: 0; }
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid var(--primary);
+        }
+        .formula {
+            background: #1e3a5f;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 1.1em;
+            margin: 0.5rem 0;
+            text-align: center;
+        }
+        .mnemonic {
+            background: #2d4a2d;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            font-style: italic;
+        }
+        .warning {
+            background: #4a2d2d;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            border-left: 4px solid #ff6b6b;
+        }
+        .info {
+            background: #2d3a4a;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            border-left: 4px solid #4ecdc4;
+        }
+        ul { margin-left: 1.5rem; margin-top: 0.5rem; }
+        li { margin: 0.3rem 0; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #333; }
+        th { background: var(--surface); color: var(--primary); }
+        .example {
+            background: #2d3a4a;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+        }
+        a { color: var(--primary); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .nav { margin-bottom: 2rem; }
+        .nav a { margin-right: 1rem; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav">
+            <a href="index.html">← Back to Index</a>
+            <a href="uniswap-v2-amm.html">← V2 AMM</a>
+            <a href="uniswap-v4-deep-dive.html">V4 Deep Dive →</a>
+        </div>
+        
+        <h1>🦄 Uniswap V3 - Concentrated Liquidity</h1>
+        <p><em>Capital efficiency through bounded positions</em></p>
+
+        <h2>🎯 Core Concept: Concentrated Liquidity</h2>
+        
+        <div class="card">
+            <h3>The Big Idea</h3>
+            <p>Instead of spreading liquidity 0 → ∞, concentrate it in a price range [Pₐ, Pᵦ].</p>
+            
+            <ul>
+                <li><strong>V2:</strong> Liquidity everywhere (inefficient)</li>
+                <li><strong>V3:</strong> Liquidity only where you choose (efficient)</li>
+            </ul>
+            
+            <div class="info">
+                <strong>Capital Efficiency:</strong> Narrower range = more liquidity per $ = more fees per $<br>
+                But also: Narrower range = higher IL risk, more management needed
+            </div>
+        </div>
+
+        <h2>📐 Key Variables</h2>
+        
+        <div class="card">
+            <h3>The V3 Variables</h3>
+            <table>
+                <tr><th>Variable</th><th>Meaning</th><th>Formula</th></tr>
+                <tr><td><code>L</code></td><td>Liquidity</td><td><code>√(x × y)</code></td></tr>
+                <tr><td><code>√P</code></td><td>Square root of price</td><td><code>√(y / x)</code></td></tr>
+                <tr><td><code>P</code></td><td>Price (Y per X)</td><td><code>y / x</code></td></tr>
+            </table>
+            
+            <div class="mnemonic">
+                <strong>Why √P?</strong> Math works out cleaner. Swaps change √P linearly with L.
+            </div>
+        </div>
+
+        <h2>💱 Swap Formulas</h2>
+        
+        <div class="card">
+            <h3>Selling X → Getting Y (Price Goes Down)</h3>
+            <div class="formula">Δy = L × (√P_new - √P_old)</div>
+            
+            <div class="mnemonic">
+                <strong>Mnemonic:</strong> "Y with √P" — Y changes with the √P difference
+            </div>
+            
+            <h3>Selling Y → Getting X (Price Goes Up)</h3>
+            <div class="formula">Δx = L × (1/√P_old - 1/√P_new)</div>
+            
+            <div class="mnemonic">
+                <strong>Mnemonic:</strong> "X with inverse" — X changes with the 1/√P difference
+            </div>
+            
+            <h3>Finding New Price After Swap</h3>
+            <p>Given Δx input, find √P_new:</p>
+            <div class="formula">√P_new = L / (L/√P_old + Δx)</div>
+            
+            <p>Given Δy input, find √P_new:</p>
+            <div class="formula">√P_new = √P_old + Δy/L</div>
+        </div>
+
+        <h2>📊 Position Bounds & Out-of-Range</h2>
+        
+        <div class="card">
+            <h3>Position States</h3>
+            <table>
+                <tr><th>Current Price</th><th>Position Holds</th><th>Earning Fees?</th></tr>
+                <tr><td>P < Pₐ (below range)</td><td>100% token X</td><td>❌ No</td></tr>
+                <tr><td>Pₐ ≤ P ≤ Pᵦ (in range)</td><td>Mix of X and Y</td><td>✅ Yes</td></tr>
+                <tr><td>P > Pᵦ (above range)</td><td>100% token Y</td><td>❌ No</td></tr>
+            </table>
+            
+            <div class="warning">
+                <strong>Out-of-Range Risk:</strong> If price leaves your range, you stop earning fees AND hold 100% of the losing asset.
+            </div>
+            
+            <div class="example">
+                <strong>Example:</strong> ETH/USDC position at [1800, 2200]<br>
+                • Price at 2000: You hold ~50% ETH, ~50% USDC ✅ earning<br>
+                • Price drops to 1700: You hold 100% ETH ❌ not earning<br>
+                • Price rises to 2300: You hold 100% USDC ❌ not earning
+            </div>
+        </div>
+
+        <h2>📉 V3 Impermanent Loss</h2>
+        
+        <div class="card">
+            <h3>IL Is AMPLIFIED in V3</h3>
+            <p>Concentrated positions have higher IL than V2:</p>
+            
+            <div class="formula">IL_v3 ≈ IL_v2 × (capital efficiency factor)</div>
+            
+            <p>Tighter range = more capital efficient = more IL per dollar</p>
+            
+            <h3>General IL Formula (Two Assets)</h3>
+            <div class="formula">IL = (2 × √(Pₐ × Pᵦ)) / (Pₐ + Pᵦ) - 1</div>
+            <p>Where Pₐ and Pᵦ are the relative price changes of each asset.</p>
+            
+            <h3>Single Asset IL (vs USD)</h3>
+            <div class="formula">IL = 2√r / (1 + r) - 1</div>
+            <p>Same as V2, but applied to a concentrated position = worse in absolute terms.</p>
+        </div>
+
+        <h2>💡 Tick Math</h2>
+        
+        <div class="card">
+            <h3>What's a Tick?</h3>
+            <p>Ticks discretize the price curve. Each tick represents a ~0.01% price change.</p>
+            
+            <div class="formula">P = 1.0001^tick</div>
+            <div class="formula">tick = log₁.₀₀₀₁(P)</div>
+            
+            <h3>Tick Spacing</h3>
+            <p>Pools have tick spacing based on fee tier:</p>
+            <table>
+                <tr><th>Fee Tier</th><th>Tick Spacing</th><th>Use Case</th></tr>
+                <tr><td>0.01%</td><td>1</td><td>Stablecoins</td></tr>
+                <tr><td>0.05%</td><td>10</td><td>Stable pairs</td></tr>
+                <tr><td>0.30%</td><td>60</td><td>Standard pairs</td></tr>
+                <tr><td>1.00%</td><td>200</td><td>Exotic pairs</td></tr>
+            </table>
+        </div>
+
+        <h2>🎯 For Market Makers</h2>
+        
+        <div class="card">
+            <h3>Strategy: Tight vs Wide Range</h3>
+            <table>
+                <tr><th>Range Width</th><th>Capital Efficiency</th><th>IL Risk</th><th>Management</th></tr>
+                <tr><td>Tight (±5%)</td><td>Very High (~20x V2)</td><td>Very High</td><td>Active rebalancing</td></tr>
+                <tr><td>Medium (±20%)</td><td>High (~5x V2)</td><td>High</td><td>Periodic check</td></tr>
+                <tr><td>Wide (±50%)</td><td>Moderate (~2x V2)</td><td>Moderate</td><td>Passive</td></tr>
+                <tr><td>Full Range</td><td>Same as V2</td><td>Same as V2</td><td>Set & forget</td></tr>
+            </table>
+            
+            <h3>JIT (Just-In-Time) Liquidity Attack</h3>
+            <ol>
+                <li>Watch mempool for large swap</li>
+                <li>Front-run: Add concentrated liquidity at swap price</li>
+                <li>Swap executes → your position earns all the fees</li>
+                <li>Back-run: Remove liquidity immediately</li>
+            </ol>
+            <p>You capture fees with near-zero IL exposure.</p>
+            
+            <div class="warning">
+                <strong>Defense:</strong> V4 hooks can detect same-block LP + remove and penalize.
+            </div>
+        </div>
+
+        <h2>🔄 Rebalancing Strategies</h2>
+        
+        <div class="card">
+            <h3>When to Rebalance?</h3>
+            <ul>
+                <li><strong>Price threshold:</strong> Rebalance when price hits 50%/80% of range</li>
+                <li><strong>Time-based:</strong> Check every N hours/days</li>
+                <li><strong>Fee threshold:</strong> Rebalance when gas cost < X% of fees earned</li>
+            </ul>
+            
+            <h3>Hedging V3 Positions</h3>
+            <ul>
+                <li>Calculate delta of position at current price</li>
+                <li>Short/long perps to neutralize</li>
+                <li>Gamma exposure is highest at range boundaries</li>
+                <li>Rebalance hedge as price moves</li>
+            </ul>
+        </div>
+
+        <h2>🔢 Quick Reference</h2>
+        
+        <div class="card">
+            <table>
+                <tr><th>What</th><th>Formula</th></tr>
+                <tr><td>Liquidity</td><td><code>L = √(x × y)</code></td></tr>
+                <tr><td>Price</td><td><code>P = y/x = (√P)²</code></td></tr>
+                <tr><td>Y output (sell X)</td><td><code>Δy = L × (√P_new - √P_old)</code></td></tr>
+                <tr><td>X output (sell Y)</td><td><code>Δx = L × (1/√P_old - 1/√P_new)</code></td></tr>
+                <tr><td>Tick to Price</td><td><code>P = 1.0001^tick</code></td></tr>
+                <tr><td>Price to Tick</td><td><code>tick = log₁.₀₀₀₁(P)</code></td></tr>
+                <tr><td>IL (single ratio)</td><td><code>2√r / (1 + r) - 1</code></td></tr>
+            </table>
+        </div>
+
+        <h2>📝 Key Mnemonics Summary</h2>
+        
+        <div class="card">
+            <ul>
+                <li><strong>"Y with √P"</strong> — Δy = L × Δ(√P)</li>
+                <li><strong>"X with inverse"</strong> — Δx = L × Δ(1/√P)</li>
+                <li><strong>"Tighter = more fees, more IL"</strong></li>
+                <li><strong>"Out of range = no fees + holding the loser"</strong></li>
+                <li><strong>"2 root r over 1 plus r minus 1"</strong> — IL formula</li>
+            </ul>
+        </div>
+
+        <hr style="margin: 2rem 0; border-color: #333;">
+        <p style="color: var(--muted); text-align: center;">
+            <a href="uniswap-v4-deep-dive.html">Next: Uniswap V4 - Hooks & Flash Accounting →</a>
+        </p>
+    </div>
+</body>
+</html>
