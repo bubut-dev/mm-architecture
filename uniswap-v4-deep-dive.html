@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uniswap V4 Deep Dive - Interview Prep</title>
+    <style>
+        :root {
+            --primary: #ff007a;
+            --bg: #0d0d0d;
+            --surface: #1a1a1a;
+            --text: #ffffff;
+            --muted: #888;
+            --code-bg: #2d2d2d;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding: 2rem;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { color: var(--primary); margin-bottom: 1rem; }
+        h2 { color: var(--primary); margin: 2rem 0 1rem; border-bottom: 1px solid #333; padding-bottom: 0.5rem; }
+        h3 { color: #ccc; margin: 1.5rem 0 0.5rem; }
+        p { margin: 0.5rem 0; }
+        code {
+            background: var(--code-bg);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9em;
+        }
+        pre {
+            background: var(--code-bg);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        pre code { background: none; padding: 0; }
+        .card {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin: 1rem 0;
+            border-left: 4px solid var(--primary);
+        }
+        .formula {
+            background: #1e3a5f;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: monospace;
+            margin: 0.5rem 0;
+        }
+        .mnemonic {
+            background: #2d4a2d;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 0.5rem 0;
+            font-style: italic;
+        }
+        ul { margin-left: 1.5rem; margin-top: 0.5rem; }
+        li { margin: 0.3rem 0; }
+        table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid #333; }
+        th { background: var(--surface); color: var(--primary); }
+        .tag {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.8em;
+            margin-right: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🦄 Uniswap V4 Deep Dive</h1>
+        <p><em>Interview Prep for Acheron Trading - Last updated: 2026-02-08</em></p>
+
+        <h2>📦 Architecture Overview</h2>
+        
+        <div class="card">
+            <h3>Singleton PoolManager</h3>
+            <p><strong>V2/V3:</strong> One contract per pair (expensive deploys, many cross-contract hops)</p>
+            <p><strong>V4:</strong> Single <code>PoolManager</code> holds ALL pools</p>
+            <ul>
+                <li>Pools identified by <code>PoolKey</code> (token0, token1, fee, tickSpacing, hooks)</li>
+                <li>No factory deploys needed</li>
+                <li>Fewer cross-contract calls = cheaper gas</li>
+            </ul>
+        </div>
+
+        <h2>🪙 EIP-6909: Minimal Multi-Token Standard</h2>
+        
+        <div class="card">
+            <h3>What is it?</h3>
+            <p>A minimal token standard like ERC-1155 but simpler and cheaper.</p>
+            
+            <h3>Core Storage Structure</h3>
+            <pre><code>// One contract, many token types
+mapping(address owner => mapping(uint256 id => uint256 balance)) balances;</code></pre>
+            
+            <h3>Key Properties</h3>
+            <ul>
+                <li><code>id</code> = token identifier (in V4: token address cast to uint256)</li>
+                <li>One 6909 contract tracks ALL your token balances</li>
+                <li>No new contract deployments per token</li>
+                <li>No <code>onReceived</code> hooks (cheaper than 1155)</li>
+                <li>Simpler interface = less gas</li>
+            </ul>
+            
+            <h3>In V4 Context</h3>
+            <ul>
+                <li>PoolManager implements 6909 internally</li>
+                <li>Your ETH, USDC, etc. tracked as <code>balances[you][tokenId]</code></li>
+                <li><code>tokenId = uint256(uint160(tokenAddress))</code></li>
+                <li>Keep tokens as "claims" inside PoolManager - no ERC-20 transfers needed</li>
+            </ul>
+        </div>
+
+        <h2>⚡ EIP-1153: Transient Storage</h2>
+        
+        <div class="card">
+            <h3>What is it?</h3>
+            <p>Storage that only persists for ONE transaction, then automatically clears.</p>
+            
+            <h3>Gas Comparison</h3>
+            <table>
+                <tr><th>Operation</th><th>Regular Storage</th><th>Transient Storage</th></tr>
+                <tr><td>SSTORE (write)</td><td>~20,000 gas</td><td>~100 gas</td></tr>
+                <tr><td>SLOAD (read)</td><td>~2,100 gas</td><td>~100 gas</td></tr>
+                <tr><td>Persistence</td><td>Forever</td><td>One transaction</td></tr>
+            </table>
+            
+            <h3>Opcodes</h3>
+            <ul>
+                <li><code>TSTORE</code> - write to transient storage</li>
+                <li><code>TLOAD</code> - read from transient storage</li>
+            </ul>
+            
+            <h3>Use Cases in V4</h3>
+            <ul>
+                <li>Flash accounting deltas (track debits/credits within tx)</li>
+                <li>Reentrancy locks (cheap guards)</li>
+                <li>Same-transaction MEV detection in hooks</li>
+            </ul>
+        </div>
+
+        <h2>💱 Flash Accounting</h2>
+        
+        <div class="card">
+            <h3>Concept</h3>
+            <p>Defer all balance checks to the END of the transaction.</p>
+            
+            <h3>Traditional Flow (V2/V3)</h3>
+            <ol>
+                <li>Transfer token A in</li>
+                <li>Check balance</li>
+                <li>Execute swap</li>
+                <li>Transfer token B out</li>
+                <li>Check balance</li>
+            </ol>
+            <p>→ Multiple storage reads/writes</p>
+            
+            <h3>Flash Accounting Flow (V4)</h3>
+            <ol>
+                <li>Record "you owe X of token A" (transient storage)</li>
+                <li>Execute any operations (swaps, LP, etc.)</li>
+                <li>Record "you're owed Y of token B"</li>
+                <li>At tx end: net all debits and credits</li>
+                <li>Only THEN: actual transfers for net difference</li>
+            </ol>
+            <p>→ One settlement, much cheaper</p>
+            
+            <h3>Code Pattern</h3>
+            <pre><code>unlock() → do stuff → settle()
+         ↓
+   transient "delta" storage:
+   delta[ETH] = -1  (you owe 1 ETH)
+   delta[USDC] = +2000 (you're owed 2000 USDC)
+         ↓
+   settle: transfer 1 ETH in, receive 2000 USDC</code></pre>
+            
+            <h3>For Market Makers</h3>
+            <ul>
+                <li>Multi-hop arb in one tx with one settlement</li>
+                <li>Keep balances as 6909 claims, avoid ERC-20 transfers entirely</li>
+                <li>Flash loan style without flash loan fees</li>
+                <li>Dramatically lower gas for active rebalancing</li>
+            </ul>
+        </div>
+
+        <h2>🪝 V4 Hooks</h2>
+        
+        <div class="card">
+            <h3>What is a Hook?</h3>
+            <p>A smart contract that you plug into a pool. PoolManager calls specific functions at lifecycle points.</p>
+            
+            <h3>Hook Lifecycle Points</h3>
+            <table>
+                <tr><th>Hook</th><th>When it runs</th></tr>
+                <tr><td><code>beforeInitialize</code></td><td>Before pool creation</td></tr>
+                <tr><td><code>afterInitialize</code></td><td>After pool creation</td></tr>
+                <tr><td><code>beforeAddLiquidity</code></td><td>Before LP deposit</td></tr>
+                <tr><td><code>afterAddLiquidity</code></td><td>After LP deposit</td></tr>
+                <tr><td><code>beforeRemoveLiquidity</code></td><td>Before LP withdrawal</td></tr>
+                <tr><td><code>afterRemoveLiquidity</code></td><td>After LP withdrawal</td></tr>
+                <tr><td><code>beforeSwap</code></td><td>Before swap executes</td></tr>
+                <tr><td><code>afterSwap</code></td><td>After swap executes</td></tr>
+                <tr><td><code>beforeDonate</code></td><td>Before fee donation</td></tr>
+                <tr><td><code>afterDonate</code></td><td>After fee donation</td></tr>
+            </table>
+            
+            <h3>Address-Based Encoding</h3>
+            <p>The hook contract address encodes which hooks are enabled via leading bits/zeros. Pool creator deploys hook contract at specific address using CREATE2.</p>
+        </div>
+
+        <h2>🛡️ OpenZeppelin MEV Protection Hooks</h2>
+        
+        <div class="card">
+            <h3>1. AntiSandwich Hook</h3>
+            <span class="tag">beforeSwap</span><span class="tag">afterSwap</span>
+            <p><strong>Purpose:</strong> Detect and prevent sandwich attacks</p>
+            <p><strong>How it works:</strong></p>
+            <ul>
+                <li>Uses transient storage to track swaps within same transaction</li>
+                <li>Uses regular storage keyed by <code>block.number</code> for cross-tx detection</li>
+                <li>Checks for suspicious patterns (front-run + back-run)</li>
+                <li>Can revert or charge penalty fee if sandwich detected</li>
+            </ul>
+            <p><strong>Storage pattern:</strong> Keyed by block number, overwritten each new block (cheap)</p>
+        </div>
+        
+        <div class="card">
+            <h3>2. LiquidityPenalty Hook</h3>
+            <span class="tag">beforeAddLiquidity</span><span class="tag">afterSwap</span>
+            <p><strong>Purpose:</strong> Prevent JIT (Just-In-Time) liquidity attacks</p>
+            <p><strong>How it works:</strong></p>
+            <ul>
+                <li>Tracks <code>block.number</code> when liquidity was added</li>
+                <li>If LP added and removed in same block as swap: reduced/zero fee share</li>
+                <li>Regular LPs who provide liquidity across blocks get full fees</li>
+            </ul>
+        </div>
+        
+        <div class="card">
+            <h3>3. LimitOrder Hook</h3>
+            <span class="tag">afterSwap</span>
+            <p><strong>Purpose:</strong> Enable limit orders on Uniswap</p>
+            <p><strong>How it works:</strong></p>
+            <ul>
+                <li>Users place orders at specific tick levels</li>
+                <li>When price crosses the tick, order executes</li>
+                <li>Hook tracks pending orders and triggers fills</li>
+            </ul>
+        </div>
+
+        <h2>📐 V3 Math Refresher</h2>
+        
+        <div class="card">
+            <h3>Core Variables</h3>
+            <ul>
+                <li><code>L</code> = liquidity = √(x × y)</li>
+                <li><code>√P</code> = √(price) = √(y/x)</li>
+                <li><code>P</code> = Y/X = "how many Y per one X"</li>
+            </ul>
+            
+            <h3>Swap Formulas</h3>
+            <div class="formula">
+                <strong>X → Y (selling X, getting Y):</strong><br>
+                Δy = L × (√P_new - √P_old)
+            </div>
+            <div class="formula">
+                <strong>Y → X (selling Y, getting X):</strong><br>
+                Δx = L × (1/√P_old - 1/√P_new)
+            </div>
+            
+            <div class="mnemonic">
+                <strong>Mnemonic:</strong> "Y with √P, X with inverse"<br>
+                Y scales directly with √P, X scales with 1/√P
+            </div>
+            
+            <h3>Finding √P_new from Input</h3>
+            <p>Given Δx (input), solve for √P_new:</p>
+            <div class="formula">
+                √P_new = L / (L/√P_old - Δx)
+            </div>
+        </div>
+
+        <h2>🔄 V2 vs V3 vs V4 Comparison</h2>
+        
+        <table>
+            <tr>
+                <th>Feature</th>
+                <th>V2</th>
+                <th>V3</th>
+                <th>V4</th>
+            </tr>
+            <tr>
+                <td>AMM Type</td>
+                <td>Constant Product (full range)</td>
+                <td>Concentrated Liquidity</td>
+                <td>Concentrated + Hooks</td>
+            </tr>
+            <tr>
+                <td>Contract per Pair</td>
+                <td>Yes</td>
+                <td>Yes</td>
+                <td>No (singleton)</td>
+            </tr>
+            <tr>
+                <td>Token Storage</td>
+                <td>In pair contract</td>
+                <td>In pair contract</td>
+                <td>In PoolManager (6909)</td>
+            </tr>
+            <tr>
+                <td>Custom Logic</td>
+                <td>No</td>
+                <td>No</td>
+                <td>Yes (hooks)</td>
+            </tr>
+            <tr>
+                <td>Flash Accounting</td>
+                <td>No</td>
+                <td>No</td>
+                <td>Yes</td>
+            </tr>
+            <tr>
+                <td>Gas Efficiency</td>
+                <td>Baseline</td>
+                <td>Higher for active LPs</td>
+                <td>Best (transient storage)</td>
+            </tr>
+        </table>
+
+        <h2>💡 Key Interview Points</h2>
+        
+        <div class="card">
+            <h3>For Market Makers</h3>
+            <ul>
+                <li>V4's flash accounting enables atomic multi-pool arbitrage</li>
+                <li>6909 claims avoid ERC-20 transfer overhead</li>
+                <li>Custom hooks can implement proprietary MM strategies</li>
+                <li>MEV protection hooks level the playing field</li>
+                <li>Lower gas = tighter spreads possible</li>
+            </ul>
+        </div>
+
+        <hr style="margin: 2rem 0; border-color: #333;">
+        <p style="color: var(--muted); text-align: center;">
+            Created for Acheron Trading Interview Prep<br>
+            Session: 2026-02-08
+        </p>
+    </div>
+</body>
+</html>
